@@ -321,19 +321,35 @@ export function LoginScreen({
       letterSpacing: 0,
     },
     googleSection: {
-      position: 'relative',
-      minHeight: 138,
-      justifyContent: 'flex-start',
       paddingTop: spacing.xs,
     },
     illustrationBehind: {
       position: 'absolute',
       left: 0,
       right: 0,
-      bottom: -38,
+      bottom: -80,
       alignItems: 'center',
-      opacity: isDark ? 0.42 : 0.58,
-      zIndex: 1,
+      opacity: isDark ? 0.5 : 0.7,
+    },
+    leftDecoration: {
+      position: 'absolute',
+      left: -16,
+      top: insets.top * 2 + 132,
+      opacity: isDark ? 0.35 : 0.5,
+    },
+    leftDecorationImage: {
+      width: 145,
+      height: 190,
+    },
+    rightDecoration: {
+      position: 'absolute',
+      right: -20,
+      bottom: 60,
+      opacity: isDark ? 0.35 : 0.5,
+    },
+    rightDecorationImage: {
+      width: 120,
+      height: 160,
     },
   });
 
@@ -343,6 +359,15 @@ export function LoginScreen({
       behavior={Platform.OS === 'ios' ? 'padding' : undefined}
       keyboardVerticalOffset={0}
     >
+      <View style={styles.illustrationBehind} pointerEvents="none">
+        <MobileLaptop width={600} height={220} />
+      </View>
+      <View style={styles.leftDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon5.png')} style={styles.leftDecorationImage} resizeMode="contain" />
+      </View>
+      <View style={styles.rightDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon3.png')} style={styles.rightDecorationImage} resizeMode="contain" />
+      </View>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.scrollContent}
@@ -352,7 +377,7 @@ export function LoginScreen({
         <View style={styles.logoCircle}>
           <View style={styles.logoClip}>
             <Image
-              source={require('../../assets/icons/blue-icon.png')}
+              source={require('../../assets/icons/blue_icon.png')}
               style={styles.logoImage}
               resizeMode="contain"
             />
@@ -463,9 +488,6 @@ export function LoginScreen({
                 <View style={styles.dividerLine} />
               </View>
               <View style={styles.googleSection}>
-                <View style={styles.illustrationBehind} pointerEvents="none">
-                  <MobileLaptop width={600} height={190} />
-                </View>
                 <TouchableOpacity
                   style={styles.socialButton}
                   onPress={onGooglePress}

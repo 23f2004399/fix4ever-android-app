@@ -8,7 +8,11 @@ import {
   Modal,
   Pressable,
   RefreshControl,
+  Alert,
+  ActivityIndicator,
+  Image,
 } from 'react-native';
+import PaymentForm from '../service-requests/PaymentForm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useNavigation } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
@@ -17,6 +21,8 @@ import { useTheme } from '../../core/theme';
 import { Button } from '../../core/components';
 import { getStoredToken } from '../../core/storage';
 import { requestWithAuth } from '../../core/api';
+import { config } from '../../core/config';
+import MobileLaptop from '../../assets/icons/mobile-laptop.svg';
 
 type TrackerStatus = 'Pending' | 'Assigned' | 'In Progress' | 'Completed' | 'Cancelled' | 'Expired';
 
@@ -26,6 +32,9 @@ interface TrackerRequest {
   model: string;
   problemDescription: string;
   problemType?: string;
+  knowsProblem?: boolean;
+  mainProblem?: { id?: string; title?: string };
+  subProblem?: { id?: string; title?: string };
   issueLevel?: string;
   priority?: string;
   status: string;
@@ -36,13 +45,22 @@ interface TrackerRequest {
   estimatedCost?: number;
   vendorServiceCharge?: number;
   adminFinalPrice?: number;
+  paymentStatus?: string;
+  serviceType?: string;
+  assignedVendor?: { _id: string } | null;
   calculatedPricing?: {
-    diagnosticFee?: number;
-    laborCharge?: number;
-    partsCharge?: number;
-    tax?: number;
-    miscCharge?: number;
-  };
+    finalChargeRange?: { min: number; max: number };
+    netChargeRange?: { min: number; max: number };
+    serviceTypeFee?: number;
+    urgencyFee?: number;
+    warrantyFee?: number;
+    dataSafetyFee?: number;
+  } | null;
+  relationalBehaviors?: {
+    id?: string;
+    title?: string;
+    pricing?: { min_price: number; max_price: number; currency?: string };
+  }[];
 }
 
 interface TrackerResponse {
@@ -70,6 +88,9 @@ const normalizeStatus = (status: string): TrackerStatus => {
   if (value.includes('cancel')) return 'Cancelled';
   if (value.includes('expire')) return 'Expired';
   if (value.includes('complete')) return 'Completed';
+  if (value === 'repair done' || value === 'device delivered' || value === 'delivered') {
+    return 'Completed';
+  }
   if (value.includes('progress') || value.includes('started') || value.includes('repair')) {
     return 'In Progress';
   }
@@ -78,7 +99,7 @@ const normalizeStatus = (status: string): TrackerStatus => {
 };
 
 const isOngoingStatus = (status: TrackerStatus): boolean => {
-  return status === 'Pending' || status === 'Assigned' || status === 'In Progress';
+  return status === 'Pending' || status === 'Assigned' || status === 'In Progress' || status === 'Completed';
 };
 
 const getProgressPercentage = (status: TrackerStatus, rawStatus: string): number => {
@@ -104,6 +125,9 @@ const getCurrentTimelineIndex = (status: string): number => {
   if (value.includes('awaiting parts') || value.includes('parts ordered')) return 5;
   if (value.includes('parts required')) return 4;
   if (value.includes('diagnosis')) return 3;
+  if (value.includes('repair done') || value.includes('device delivered') || value.includes('delivered')) {
+    return 8;
+  }
   if (value.includes('work started') || value.includes('in progress') || value.includes('repair')) {
     return 2;
   }
@@ -130,6 +154,12 @@ const formatCurrency = (amount: number): string => {
   return `INR ${amount.toLocaleString('en-IN')}`;
 };
 
+const GST_RATE = 0.18;
+const calcGST = (base: number) => {
+  const gst = Math.round(base * GST_RATE * 100) / 100;
+  return { base, gst, total: Math.round((base + gst) * 100) / 100 };
+};
+
 export function TrackerScreen() {
   const insets = useSafeAreaInsets();
   const navigation = useNavigation<any>();
@@ -137,6 +167,8 @@ export function TrackerScreen() {
   const [requests, setRequests] = useState<TrackerRequest[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedRequest, setSelectedRequest] = useState<TrackerRequest | null>(null);
+  const [showPaymentModal, setShowPaymentModal] = useState(false);
+  const [isSimulating, setIsSimulating] = useState(false);
 
   const brandBlue = '#01325D';
   const primaryBlue = isDark ? '#1C4E7E' : brandBlue;
@@ -194,6 +226,43 @@ export function TrackerScreen() {
     getTrackerRequests();
   }, [getTrackerRequests]);
 
+  const simulatePaymentReady = useCallback(async (requestId: string) => {
+    setIsSimulating(true);
+    try {
+      const token = await getStoredToken();
+      if (!token) return;
+      const response = await requestWithAuth(
+        `/service-requests/${requestId}/simulate-payment-ready`,
+        token,
+        { method: 'POST' }
+      );
+      if (response.data?.success) {
+        Alert.alert('Test Mode', response.data.message);
+        await getTrackerRequests();
+        // Re-select updated request
+        setSelectedRequest(prev =>
+          prev?._id === requestId
+            ? { ...prev, status: 'Ready for Pickup', adminFinalPrice: response.data.data.adminFinalPrice, paymentStatus: 'pending', assignedVendor: response.data.data.assignedVendor ? { _id: response.data.data.assignedVendor } : prev.assignedVendor }
+            : prev
+        );
+      }
+    } catch (e) {
+      Alert.alert('Error', 'Could not simulate payment ready state');
+    } finally {
+      setIsSimulating(false);
+    }
+  }, [getTrackerRequests]);
+
+  const isPaymentDue = (request: TrackerRequest) => {
+    const status = (request.status || '').toLowerCase();
+    const isReadyStatus =
+      status === 'repair done' ||
+      status === 'device delivered' ||
+      status === 'delivered' ||
+      status === 'completed';
+    return isReadyStatus && !!request.adminFinalPrice && request.paymentStatus !== 'completed';
+  };
+
   const getStatusChipColors = (status: TrackerStatus) => {
     switch (status) {
       case 'Completed':
@@ -236,28 +305,60 @@ export function TrackerScreen() {
   };
 
   const getPricingRows = (request: TrackerRequest) => {
-    const rows = [
-      { label: 'Diagnostic Fee', amount: Number(request.calculatedPricing?.diagnosticFee || 0) },
-      {
-        label: 'Labor Charge',
-        amount: Number(request.calculatedPricing?.laborCharge || request.vendorServiceCharge || 0),
-      },
-      { label: 'Parts Charge', amount: Number(request.calculatedPricing?.partsCharge || 0) },
-      { label: 'Tax', amount: Number(request.calculatedPricing?.tax || 0) },
-      { label: 'Misc', amount: Number(request.calculatedPricing?.miscCharge || 0) },
-    ].filter((item) => item.amount > 0);
+    const cp = request.calculatedPricing;
 
-    if (rows.length === 0) {
-      const fallback = Number(request.estimatedCost || request.budget || 0);
+    if (cp) {
+      const rows = [
+        cp.netChargeRange
+          ? { label: 'Base Service Charge', amount: -1, range: cp.netChargeRange }
+          : cp.finalChargeRange
+            ? { label: 'Estimated Charge', amount: -1, range: cp.finalChargeRange }
+            : null,
+        cp.serviceTypeFee
+          ? { label: 'Service Type Fee', amount: cp.serviceTypeFee }
+          : null,
+        cp.urgencyFee
+          ? { label: 'Urgency Charges', amount: cp.urgencyFee }
+          : null,
+        cp.warrantyFee
+          ? { label: 'Extended Warranty', amount: cp.warrantyFee }
+          : null,
+        cp.dataSafetyFee
+          ? { label: 'Data Safety & Backup', amount: cp.dataSafetyFee }
+          : null,
+      ].filter(Boolean) as { label: string; amount: number; range?: { min: number; max: number } }[];
+
+      const totalRow = request.adminFinalPrice
+        ? request.adminFinalPrice
+        : cp.finalChargeRange
+          ? -1
+          : 0;
+
+      return { rows, total: totalRow, finalChargeRange: cp.finalChargeRange };
+    }
+
+    // Fall back to relationalBehaviors pricing
+    const rb = request.relationalBehaviors?.[0]?.pricing;
+    if (rb) {
       return {
-        rows: [{ label: 'Estimated Cost', amount: fallback }],
-        total: Number(request.adminFinalPrice || fallback),
+        rows: [
+          {
+            label: request.relationalBehaviors![0].title || 'Repair / Replacement',
+            amount: -1,
+            range: { min: rb.min_price, max: rb.max_price },
+          },
+        ],
+        total: -1,
+        finalChargeRange: { min: rb.min_price, max: rb.max_price },
       };
     }
 
-    const totalFromRows = rows.reduce((sum, item) => sum + item.amount, 0);
-    const total = Number(request.adminFinalPrice || totalFromRows);
-    return { rows, total };
+    const fallback = Number(request.estimatedCost || request.vendorServiceCharge || request.budget || 0);
+    return {
+      rows: fallback > 0 ? [{ label: 'Estimated Cost', amount: fallback }] : [],
+      total: Number(request.adminFinalPrice || fallback),
+      finalChargeRange: undefined,
+    };
   };
 
   const styles = useMemo(
@@ -277,7 +378,7 @@ export function TrackerScreen() {
         },
         scroll: {
           flex: 1,
-          backgroundColor: screenBg,
+          backgroundColor: 'transparent',
         },
         scrollContent: {
           paddingHorizontal: spacing.lg,
@@ -426,6 +527,34 @@ export function TrackerScreen() {
           fontFamily: fonts.semibold,
           fontSize: 13,
           lineHeight: 18,
+        },
+        illustrationBehind: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: -80,
+          alignItems: 'center',
+          opacity: isDark ? 0.5 : 0.7,
+        },
+        leftDecoration: {
+          position: 'absolute',
+          left: -16,
+          top: insets.top * 2 + 132,
+          opacity: isDark ? 0.35 : 0.5,
+        },
+        leftDecorationImage: {
+          width: 145,
+          height: 190,
+        },
+        rightDecoration: {
+          position: 'absolute',
+          right: -20,
+          bottom: 60,
+          opacity: isDark ? 0.35 : 0.5,
+        },
+        rightDecorationImage: {
+          width: 120,
+          height: 160,
         },
         emptyState: {
           alignItems: 'center',
@@ -617,6 +746,54 @@ export function TrackerScreen() {
           fontSize: 14,
           lineHeight: 18,
         },
+        paymentDueBox: {
+          marginTop: spacing.md,
+          borderRadius: 12,
+          borderWidth: 1,
+          borderColor: isDark ? '#FFD7A3' : '#F59E0B',
+          backgroundColor: isDark ? 'rgba(255,215,163,0.12)' : 'rgba(245,158,11,0.08)',
+          padding: spacing.md,
+        },
+        paymentDueTitle: {
+          color: isDark ? '#FFD7A3' : '#B45309',
+          fontFamily: fonts.bold,
+          fontSize: 15,
+          marginBottom: spacing.xs,
+        },
+        paymentDueAmount: {
+          color: isDark ? '#FFD7A3' : '#B45309',
+          fontFamily: fonts.semibold,
+          fontSize: 14,
+          marginBottom: spacing.sm,
+        },
+        payNowButton: {
+          backgroundColor: isDark ? '#FFD7A3' : '#F59E0B',
+          borderRadius: 10,
+          paddingVertical: spacing.sm,
+          alignItems: 'center',
+        },
+        payNowText: {
+          color: isDark ? '#1A1A1A' : '#FFFFFF',
+          fontFamily: fonts.bold,
+          fontSize: 15,
+        },
+        testButton: {
+          marginTop: spacing.md,
+          borderRadius: 10,
+          borderWidth: 1,
+          borderColor: isDark ? '#B8C8DE' : '#94A3B8',
+          borderStyle: 'dashed',
+          paddingVertical: spacing.sm,
+          alignItems: 'center',
+          flexDirection: 'row',
+          justifyContent: 'center',
+          gap: spacing.xs,
+        },
+        testButtonText: {
+          color: isDark ? '#B8C8DE' : '#64748B',
+          fontFamily: fonts.medium,
+          fontSize: 12,
+        },
       }),
     [
       spacing,
@@ -637,6 +814,15 @@ export function TrackerScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.illustrationBehind} pointerEvents="none">
+        <MobileLaptop width={600} height={220} />
+      </View>
+      <View style={styles.leftDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon5.png')} style={styles.leftDecorationImage} resizeMode="contain" />
+      </View>
+      <View style={styles.rightDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon3.png')} style={styles.rightDecorationImage} resizeMode="contain" />
+      </View>
       <View style={styles.fixedTop}>
         <View style={styles.header}>
           <Text style={styles.title}>Request Tracker</Text>
@@ -784,10 +970,10 @@ export function TrackerScreen() {
                     <View style={styles.detailsCol}>
                       <Text style={styles.detailsSubTitle}>Request Details</Text>
                       <Text style={styles.detailsLine}>
-                        Problem: <Text style={styles.detailsLineValue}>{selectedRequest.problemDescription || 'N/A'}</Text>
+                        Problem: <Text style={styles.detailsLineValue}>{selectedRequest.mainProblem?.title || selectedRequest.problemDescription || 'N/A'}</Text>
                       </Text>
                       <Text style={styles.detailsLine}>
-                        Type: <Text style={styles.detailsLineValue}>{selectedRequest.problemType || 'Not specified'}</Text>
+                        Type: <Text style={styles.detailsLineValue}>{selectedRequest.subProblem?.title || (selectedRequest.knowsProblem ? 'Known Problem' : 'Needs Identification')}</Text>
                       </Text>
                       <Text style={styles.detailsLine}>
                         Level: <Text style={styles.detailsLineValue}>{selectedRequest.issueLevel || selectedRequest.priority || statusLabel}</Text>
@@ -803,28 +989,124 @@ export function TrackerScreen() {
                     </View>
                   </View>
 
+                  {/* Payment Due Section */}
+                  {isPaymentDue(selectedRequest) && (() => {
+                    const gst = calcGST(selectedRequest.adminFinalPrice!);
+                    return (
+                      <View style={styles.paymentDueBox}>
+                        <Text style={styles.paymentDueTitle}>Payment Required</Text>
+                        <View style={{ marginVertical: 6, gap: 4 }}>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={styles.paymentDueAmount}>Service Charge</Text>
+                            <Text style={styles.paymentDueAmount}>₹{gst.base.toFixed(2)}</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                            <Text style={styles.paymentDueAmount}>GST (18%)</Text>
+                            <Text style={styles.paymentDueAmount}>₹{gst.gst.toFixed(2)}</Text>
+                          </View>
+                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginTop: 4, borderTopWidth: 1, borderTopColor: '#ccc', paddingTop: 4 }}>
+                            <Text style={[styles.paymentDueAmount, { fontWeight: '700' }]}>Total</Text>
+                            <Text style={[styles.paymentDueAmount, { fontWeight: '700' }]}>₹{gst.total.toFixed(2)}</Text>
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.payNowButton}
+                          onPress={() => setShowPaymentModal(true)}
+                        >
+                          <Text style={styles.payNowText}>Pay Now ₹{gst.total.toFixed(2)}</Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })()}
+
+                  {/* DEV TEST BUTTON — only visible when DEV_MODE is on */}
+                  {config.DEV_MODE && !isPaymentDue(selectedRequest) && selectedRequest.paymentStatus !== 'completed' && (
+                    <TouchableOpacity
+                      style={styles.testButton}
+                      onPress={() => simulatePaymentReady(selectedRequest._id)}
+                      disabled={isSimulating}
+                    >
+                      {isSimulating
+                        ? <ActivityIndicator size="small" color={labelColor} />
+                        : <Icon name="zap" size={12} color={labelColor} />}
+                      <Text style={styles.testButtonText}>
+                        {isSimulating ? 'Simulating...' : '[DEV] Simulate Ready for Payment'}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+
                   <Text style={styles.modalSectionTitle}>Pricing Summary</Text>
                   <View style={styles.pricingTable}>
-                    {pricing.rows.map((item, index) => (
-                      <View
-                        key={item.label}
-                        style={[
-                          styles.pricingRow,
-                          index === pricing.rows.length - 1 ? { borderBottomWidth: 0 } : undefined,
-                        ]}
-                      >
-                        <Text style={styles.pricingLabel}>{item.label}</Text>
-                        <Text style={styles.pricingValue}>{formatCurrency(item.amount)}</Text>
+                    {pricing.rows.length === 0 ? (
+                      <View style={styles.pricingRow}>
+                        <Text style={styles.pricingLabel}>No pricing data available yet</Text>
                       </View>
-                    ))}
+                    ) : (
+                      pricing.rows.map((item, index) => (
+                        <View
+                          key={item.label}
+                          style={[
+                            styles.pricingRow,
+                            index === pricing.rows.length - 1 ? { borderBottomWidth: 0 } : undefined,
+                          ]}
+                        >
+                          <Text style={styles.pricingLabel}>{item.label}</Text>
+                          <Text style={styles.pricingValue}>
+                            {item.range
+                              ? `₹${item.range.min} – ₹${item.range.max}`
+                              : formatCurrency(item.amount)}
+                          </Text>
+                        </View>
+                      ))
+                    )}
                     <View style={styles.pricingTotalRow}>
                       <Text style={styles.pricingTotalLabel}>Total</Text>
-                      <Text style={styles.pricingTotalValue}>{formatCurrency(pricing.total)}</Text>
+                      <Text style={styles.pricingTotalValue}>
+                        {pricing.total === -1 && pricing.finalChargeRange
+                          ? `₹${pricing.finalChargeRange.min} – ₹${pricing.finalChargeRange.max}`
+                          : pricing.total > 0
+                            ? formatCurrency(pricing.total)
+                            : 'Pending'}
+                      </Text>
                     </View>
                   </View>
                 </ScrollView>
               );
             })()}
+          </View>
+        </View>
+      </Modal>
+
+      {/* Payment Modal */}
+      <Modal
+        visible={showPaymentModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowPaymentModal(false)}
+      >
+        <View style={[styles.modalOverlay, { justifyContent: 'flex-end', paddingHorizontal: 0 }]}>
+          <View style={[styles.modalCard, { borderBottomLeftRadius: 0, borderBottomRightRadius: 0, maxHeight: '90%' }]}>
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', padding: spacing.lg, borderBottomWidth: 1, borderBottomColor: cardBorder }}>
+              <Text style={[styles.modalTitle, { marginBottom: 0 }]}>Complete Payment</Text>
+              <Pressable style={styles.closeButton} onPress={() => setShowPaymentModal(false)}>
+                <Icon name="x" size={16} color={labelColor} />
+              </Pressable>
+            </View>
+            <ScrollView style={{ padding: spacing.lg }}>
+              {selectedRequest && (
+                <PaymentForm
+                  serviceRequestId={selectedRequest._id}
+                  vendorId={selectedRequest.assignedVendor?._id || selectedRequest._id}
+                  amount={calcGST(selectedRequest.adminFinalPrice || 0).total}
+                  onPaymentComplete={() => {
+                    setShowPaymentModal(false);
+                    setSelectedRequest(null);
+                    getTrackerRequests();
+                  }}
+                  onCancel={() => setShowPaymentModal(false)}
+                />
+              )}
+            </ScrollView>
           </View>
         </View>
       </Modal>

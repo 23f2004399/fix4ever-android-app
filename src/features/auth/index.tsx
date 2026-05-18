@@ -1,13 +1,15 @@
 import React from 'react'
+import { View, Text, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Feather';
 import { useAuth } from '../../lib/contexts/auth-context';
+import { useTheme } from '../../core/theme';
+import { ThemeSelector } from '../../core/components/ThemeSelector';
 
 import type { User } from '../../core/api';
 
 import {
-  hasCompletedOnboarding,
-  setOnboardingCompleted,
-  getStoredUser,
   setAuth,
   clearAuth,
 } from '../../core/storage';
@@ -17,11 +19,48 @@ import { SignupScreen } from './SignupScreen';
 import { AccountScreen } from './AccountScreen';
 import { ResetPasswordScreen } from './ResetPasswordScreen';
 import { GoogleOAuthScreen } from './GoogleOAuthScreen';
-import { ThemeSelector } from '../../core/components';
-import { useTheme } from '../../core/theme';
 
 
 const Stack = createNativeStackNavigator();
+
+function CompactHeader({ options, back, navigation: nav }: any) {
+  const insets = useSafeAreaInsets();
+  const { colors, spacing, isDark } = useTheme();
+  const bg = isDark ? '#242D3B' : colors.background;
+
+  return (
+    <View style={{ backgroundColor: bg, borderBottomWidth: 1, borderBottomColor: colors.border }}>
+      <View style={{ height: insets.top }} />
+      <View style={{
+        height: 52,
+        flexDirection: 'row',
+        alignItems: 'center',
+        paddingLeft: spacing.sm,
+        paddingRight: spacing.lg,
+      }}>
+        {back ? (
+          <TouchableOpacity
+            onPress={() => nav.goBack()}
+            activeOpacity={0.7}
+            style={{ width: 36, height: 36, alignItems: 'center', justifyContent: 'center', marginRight: spacing.sm }}
+          >
+            <Icon name="chevron-left" size={24} color={colors.foreground} />
+          </TouchableOpacity>
+        ) : null}
+        {options.title ? (
+          <Text style={{ fontFamily: 'Montserrat-SemiBold', fontSize: 18, color: colors.foreground }}>
+            {options.title}
+          </Text>
+        ) : null}
+        {options.title === 'Account' ? (
+          <View style={{ marginLeft: 'auto' }}>
+            <ThemeSelector />
+          </View>
+        ) : null}
+      </View>
+    </View>
+  );
+}
 
 export default function AuthStack({ route }: { route: { params?: { screen?: string } } }) {
     const initialScreen = route.params?.screen || 'Login';
@@ -29,24 +68,16 @@ export default function AuthStack({ route }: { route: { params?: { screen?: stri
 
     const { setUser } = useAuth();
 
-      const handleLoginSuccess = async (token: string, user: User, refreshToken?: string) => {
-        await setAuth(token, user, refreshToken);
-        setUser(user);
-      };
-    
+    const handleLoginSuccess = async (token: string, user: User, refreshToken?: string) => {
+      await setAuth(token, user, refreshToken);
+      setUser(user);
+    };
 
     return (
         <Stack.Navigator
             initialRouteName={initialScreen}
             screenOptions={{
-                headerStyle: {
-                    backgroundColor: colors.background,
-                },
-                headerTintColor: colors.foreground,
-                headerTitleStyle: {
-                    color: colors.foreground,
-                },
-                headerShadowVisible: !isDark,
+                header: (props) => <CompactHeader {...props} />,
                 contentStyle: {
                     backgroundColor: colors.background,
                 },
@@ -92,7 +123,7 @@ export default function AuthStack({ route }: { route: { params?: { screen?: stri
             <Stack.Screen
                 name="Account"
                 options={{
-                    headerRight: () => <ThemeSelector isCompact={true} />,
+                    title: 'Account',
                     contentStyle: {
                         backgroundColor: isDark ? '#242D3B' : colors.background,
                     },
@@ -114,10 +145,8 @@ export default function AuthStack({ route }: { route: { params?: { screen?: stri
                     <ResetPasswordScreen
                         onBack={() => props.navigation.goBack()}
                         onSuccess={() => {
-                            // Handle password reset success
                             console.log('Password reset successful');
                             props.navigation.navigate('Login');
-                            
                         }}
                     />
                 )}
@@ -127,7 +156,6 @@ export default function AuthStack({ route }: { route: { params?: { screen?: stri
                     <GoogleOAuthScreen
                         onBack={() => props.navigation.goBack()}
                         onSuccess={async (token, user) => {
-                            // Handle Google OAuth success
                             console.log('Google OAuth successful', { token, user });
                             await handleLoginSuccess(token, user);
                             props.navigation.reset({

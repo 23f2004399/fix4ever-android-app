@@ -15,6 +15,7 @@ async function request<T>(
   const url = `${base}${path}`;
   const { body, headers: customHeaders, ...rest } = options;
   const headers: Record<string, string> = {
+    ...(body ? { 'Content-Type': 'application/json' } : {}),
     ...(customHeaders as Record<string, string>),
   };
   try {

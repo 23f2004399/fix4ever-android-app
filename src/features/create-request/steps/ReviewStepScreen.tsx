@@ -105,19 +105,37 @@ export function ReviewStepScreen({
           </Text>
         </View>
 
-        {formData.knowsProblem && (
+        {formData.knowsProblem && formData.mainProblem?.title && (
           <View style={styles.input}>
             <Text style={styles.optionText}>
-              Problem: {problemCategories.find(c => c.value === formData.problemType)?.label || formData.problemType}
+              Problem: {formData.mainProblem.title}
             </Text>
           </View>
         )}
 
-        <View style={styles.input}>
-          <Text style={styles.optionText}>
-            Description: {formData.problemDescription}
-          </Text>
-        </View>
+        {formData.knowsProblem && formData.subProblem?.title && (
+          <View style={styles.input}>
+            <Text style={styles.optionText}>
+              Sub-category: {formData.subProblem.title}
+            </Text>
+          </View>
+        )}
+
+        {formData.knowsProblem && formData.relationalBehaviors?.[0]?.title && (
+          <View style={styles.input}>
+            <Text style={styles.optionText}>
+              Specific Issue: {formData.relationalBehaviors[0].title}
+            </Text>
+          </View>
+        )}
+
+        {!formData.knowsProblem && formData.problemDescription && (
+          <View style={styles.input}>
+            <Text style={styles.optionText}>
+              Description: {formData.problemDescription}
+            </Text>
+          </View>
+        )}
 
         {formData.selectedDate && formData.selectedTimeSlot && (
           <View style={styles.input}>

@@ -98,9 +98,19 @@ export default function PaymentForm({
       },
     
       onError: (error: CFErrorResponse, orderID: string) => {
-        console.error('Payment error:', error, 'Order ID:', orderID);
+        console.log('Payment onError:', error, 'Order ID:', orderID);
         setIsProcessing(false);
-        Alert.alert('Payment Error', error.message || 'Payment failed');
+        const msg = (error.message || '').toLowerCase();
+        const isCancelled =
+          msg.includes('cancel') ||
+          msg.includes('back') ||
+          msg.includes('dismiss') ||
+          msg.includes('user_back') ||
+          msg.includes('closed');
+        if (!isCancelled) {
+          Alert.alert('Payment Failed', error.message || 'Payment could not be completed. Please try again.');
+        }
+        // Cancellation: silently reset — user chose to go back, no alert needed
       },
     });
 

@@ -35,7 +35,7 @@ export function AccountScreen({ onLogout }: AccountScreenProps) {
     },
     scroll: {
       flex: 1,
-      backgroundColor: containerBg,
+      backgroundColor: 'transparent',
     },
     content: {
       flexGrow: 1,
@@ -144,18 +144,47 @@ export function AccountScreen({ onLogout }: AccountScreenProps) {
       color: '#FFFFFF',
       fontFamily: fonts.medium,
     },
-    illustrationWrap: {
-      width: '100%',
+    illustrationBehind: {
+      position: 'absolute',
+      left: 0,
+      right: 0,
+      bottom: -80,
       alignItems: 'center',
-      height: 170,
-      overflow: 'hidden',
-      marginTop: spacing.xs,
-      opacity: 0.7,
+      opacity: isDark ? 0.5 : 0.7,
+    },
+    leftDecoration: {
+      position: 'absolute',
+      left: -16,
+      top: insets.top * 2 + 132,
+      opacity: isDark ? 0.35 : 0.5,
+    },
+    leftDecorationImage: {
+      width: 145,
+      height: 190,
+    },
+    rightDecoration: {
+      position: 'absolute',
+      right: -20,
+      bottom: 60,
+      opacity: isDark ? 0.35 : 0.5,
+    },
+    rightDecorationImage: {
+      width: 120,
+      height: 160,
     },
   });
 
   return (
     <SafeAreaView style={styles.container} edges={['bottom']}>
+      <View style={styles.illustrationBehind} pointerEvents="none">
+        <MobileLaptop width={600} height={220} />
+      </View>
+      <View style={styles.leftDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon5.png')} style={styles.leftDecorationImage} resizeMode="contain" />
+      </View>
+      <View style={styles.rightDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon3.png')} style={styles.rightDecorationImage} resizeMode="contain" />
+      </View>
       <ScrollView
         style={styles.scroll}
         contentContainerStyle={styles.content}
@@ -164,7 +193,7 @@ export function AccountScreen({ onLogout }: AccountScreenProps) {
         <View style={styles.logoCircle}>
           <View style={styles.logoClip}>
             <Image
-              source={require('../../assets/icons/blue-icon.png')}
+              source={require('../../assets/icons/blue_icon.png')}
               style={styles.logoIcon}
               resizeMode="contain"
             />
@@ -191,9 +220,6 @@ export function AccountScreen({ onLogout }: AccountScreenProps) {
         <TouchableOpacity onPress={onLogout} activeOpacity={0.85} style={styles.logoutButton}>
           <Text style={styles.logoutText}>Log out</Text>
         </TouchableOpacity>
-        <View style={styles.illustrationWrap}>
-          <MobileLaptop width={600} height={190} />
-        </View>
       </ScrollView>
     </SafeAreaView>
   );

@@ -11,12 +11,13 @@ import {
   TextStyle,
   ScrollView
 } from 'react-native';
-import MapView, { Marker, Region } from 'react-native-maps';
+import MapView, { Marker, Region, Callout } from 'react-native-maps';
 import Config from 'react-native-config';
 import { useTheme } from '../../../core/theme';
 import { Input } from '../../../core/components';
 
 import Icon from 'react-native-vector-icons/Feather';
+import { config } from '../../../core/config';
 
 import { FormData } from '../ServiceRequestStack';
 import {
@@ -70,6 +71,16 @@ export function ContactStepScreen({
 
   const [mapRegion, setMapRegion] = useState<Region>(defaultRegion);
   const [isResolvingAddress, setIsResolvingAddress] = useState(false);
+  const [isMapLoading, setIsMapLoading] = useState(true);
+
+  interface NearbyVendor {
+    _id: string;
+    name: string;
+    latitude: number;
+    longitude: number;
+    workingHours?: { start?: string; end?: string };
+  }
+  const [nearbyVendors, setNearbyVendors] = useState<NearbyVendor[]>([]);
 
   
   // Simple text change handler - only update parent
@@ -273,6 +284,23 @@ export function ContactStepScreen({
   useEffect(() => {
   }, [selectedCoordinate, hasLatLong]);
 
+  useEffect(() => {
+    if (formData.serviceType !== 'visit-shop' || !hasLatLong) {
+      setNearbyVendors([]);
+      return;
+    }
+    const fetchNearby = async () => {
+      try {
+        const res = await fetch(
+          `${config.API_BASE_URL}/vendors/nearby?lat=${formData.latitude}&lng=${formData.longitude}&radius=15`
+        );
+        const json = await res.json();
+        if (json.success) setNearbyVendors(json.vendors);
+      } catch {}
+    };
+    fetchNearby();
+  }, [formData.serviceType, formData.latitude, formData.longitude, hasLatLong]);
+
   const styles = StyleSheet.create({
     container: {
       flex: 1,
@@ -471,6 +499,22 @@ export function ContactStepScreen({
       color: colors.foreground,
       fontWeight: '500' as const,
     } as TextStyle,
+    mapLoadingOverlay: {
+      position: 'absolute' as const,
+      top: 0,
+      left: 0,
+      right: 0,
+      bottom: 0,
+      backgroundColor: colors.card,
+      alignItems: 'center' as const,
+      justifyContent: 'center' as const,
+      gap: spacing.sm,
+    } as ViewStyle,
+    mapLoadingText: {
+      fontSize: 13,
+      color: colors.mutedForeground,
+      fontWeight: '500' as const,
+    } as TextStyle,
     mapHelp: {
       marginTop: spacing.sm,
       fontSize: 12,
@@ -500,6 +544,36 @@ export function ContactStepScreen({
     } as TextStyle,
     mapHint: {
       marginTop: spacing.xs,
+      fontSize: 12,
+      color: colors.mutedForeground,
+    } as TextStyle,
+    vendorCallout: {
+      width: 160,
+      padding: 8,
+      borderRadius: 8,
+      backgroundColor: colors.card,
+    } as ViewStyle,
+    vendorCalloutName: {
+      fontSize: 13,
+      fontWeight: '700' as const,
+      color: colors.foreground,
+      marginBottom: 2,
+    } as TextStyle,
+    vendorCalloutHours: {
+      fontSize: 11,
+      color: colors.mutedForeground,
+    } as TextStyle,
+    vendorsBanner: {
+      marginTop: spacing.xs,
+      paddingVertical: 6,
+      paddingHorizontal: spacing.sm,
+      borderRadius: 8,
+      backgroundColor: colors.muted,
+      flexDirection: 'row' as const,
+      alignItems: 'center' as const,
+      gap: spacing.xs,
+    } as ViewStyle,
+    vendorsBannerText: {
       fontSize: 12,
       color: colors.mutedForeground,
     } as TextStyle,
@@ -559,8 +633,8 @@ export function ContactStepScreen({
           initialRegion={mapRegion}
           region={mapRegion}
           onPress={handleMapPress}
-          onMapReady={() => {}}
-          onMapLoaded={() => {}}
+          onMapReady={() => setIsMapLoading(false)}
+          onMapLoaded={() => setIsMapLoading(false)}
           onRegionChangeComplete={() => {}}
           zoomEnabled
           scrollEnabled
@@ -575,15 +649,51 @@ export function ContactStepScreen({
               onDragEnd={handleMarkerDragEnd}
             />
           )}
+          {formData.serviceType === 'visit-shop' && nearbyVendors.map(vendor => (
+            <Marker
+              key={String(vendor._id)}
+              coordinate={{ latitude: vendor.latitude, longitude: vendor.longitude }}
+              pinColor="#E67E22"
+            >
+              <Callout tooltip>
+                <View style={styles.vendorCallout}>
+                  <Text style={styles.vendorCalloutName}>{vendor.name}</Text>
+                  {vendor.workingHours?.start && vendor.workingHours?.end && (
+                    <Text style={styles.vendorCalloutHours}>
+                      {vendor.workingHours.start} – {vendor.workingHours.end}
+                    </Text>
+                  )}
+                </View>
+              </Callout>
+            </Marker>
+          ))}
         </MapView>
-        <View style={styles.mapOverlay}>
-          <Text style={styles.mapOverlayText}>Tap map to drop pin</Text>
-        </View>
+        {isMapLoading && (
+          <View style={styles.mapLoadingOverlay}>
+            <ActivityIndicator size="large" color={colors.primary} />
+            <Text style={styles.mapLoadingText}>Loading map...</Text>
+          </View>
+        )}
+        {!isMapLoading && (
+          <View style={styles.mapOverlay}>
+            <Text style={styles.mapOverlayText}>Tap map to drop pin</Text>
+          </View>
+        )}
       </View>
 
       <Text style={styles.mapHelp}>
         Tip: Search, tap the map, drag the pin, or use current location in serviceable areas.
       </Text>
+      {formData.serviceType === 'visit-shop' && hasLatLong && (
+        <View style={styles.vendorsBanner}>
+          <Icon name="map-pin" size={12} color="#E67E22" />
+          <Text style={styles.vendorsBannerText}>
+            {nearbyVendors.length > 0
+              ? `${nearbyVendors.length} Fix4Ever shop${nearbyVendors.length > 1 ? 's' : ''} within 15 km — tap orange pins to see details`
+              : 'No Fix4Ever shops found within 15 km of your location'}
+          </Text>
+        </View>
+      )}
       {selectedCoordinate && (
         <View style={styles.locationSuccessCard}>
           <Text style={styles.locationSuccessTitle}>Location captured successfully!</Text>

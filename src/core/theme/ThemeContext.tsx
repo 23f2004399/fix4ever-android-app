@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useMemo, useState } from 'react';
-import { useColorScheme } from 'react-native';
 import {
   colorsLight,
   colorsDark,
@@ -26,11 +25,7 @@ export function ThemeProvider({
 }: {
   children: React.ReactNode;
 }) {
-  const systemScheme = useColorScheme();
-  const [themeMode, setThemeMode] = useState<ThemeMode>(() => {
-    // Default to system theme
-    return systemScheme === 'dark' ? 'dark' : 'light';
-  });
+  const [themeMode, setThemeMode] = useState<ThemeMode>('light');
 
   const isDark = themeMode === 'dark';
 

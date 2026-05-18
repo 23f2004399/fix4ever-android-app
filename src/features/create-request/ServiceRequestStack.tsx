@@ -1310,6 +1310,11 @@ export function ServiceRequestStack({
           }
         });
 
+            // calculatedPricing is derived from formData via useMemo — not in formData itself
+            if (calculatedPricing) {
+              formDataObj.append('calculatedPricing', JSON.stringify(calculatedPricing));
+            }
+
             // Append image files to FormData
             // Format: { uri: local path, type: mime type, name: filename }
         if (formData.issueImages.length > 0) {

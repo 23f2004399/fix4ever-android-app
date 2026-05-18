@@ -8,9 +8,11 @@ import {
   Alert,
   ActivityIndicator,
   RefreshControl,
+  Image,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
+import MobileLaptop from '../../assets/icons/mobile-laptop.svg';
 import { useTheme } from '../../core/theme';
 import { Button } from '../../core/components';
 import {
@@ -136,9 +138,37 @@ export function DraftsScreen() {
           borderBottomWidth: 1,
           borderBottomColor: cardBorder,
         },
+        illustrationBehind: {
+          position: 'absolute',
+          left: 0,
+          right: 0,
+          bottom: -80,
+          alignItems: 'center',
+          opacity: isDark ? 0.5 : 0.7,
+        },
+        leftDecoration: {
+          position: 'absolute',
+          left: -16,
+          top: insets.top * 2 + 132,
+          opacity: isDark ? 0.35 : 0.5,
+        },
+        leftDecorationImage: {
+          width: 145,
+          height: 190,
+        },
+        rightDecoration: {
+          position: 'absolute',
+          right: -20,
+          bottom: 60,
+          opacity: isDark ? 0.35 : 0.5,
+        },
+        rightDecorationImage: {
+          width: 120,
+          height: 160,
+        },
         scroll: {
           flex: 1,
-          backgroundColor: screenBg,
+          backgroundColor: 'transparent',
         },
         scrollContent: {
           paddingHorizontal: spacing.lg,
@@ -395,6 +425,15 @@ export function DraftsScreen() {
 
   return (
     <View style={styles.container}>
+      <View style={styles.illustrationBehind} pointerEvents="none">
+        <MobileLaptop width={600} height={220} />
+      </View>
+      <View style={styles.leftDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon5.png')} style={styles.leftDecorationImage} resizeMode="contain" />
+      </View>
+      <View style={styles.rightDecoration} pointerEvents="none">
+        <Image source={require('../../assets/icons/icon3.png')} style={styles.rightDecorationImage} resizeMode="contain" />
+      </View>
       <View style={styles.fixedTop}>
         <View style={styles.header}>
           <Text style={styles.title}>Drafts</Text>

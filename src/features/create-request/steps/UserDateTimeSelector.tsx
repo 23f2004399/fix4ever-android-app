@@ -12,7 +12,7 @@ import { useTheme } from '../../../core/theme';
 import { addDays, format, startOfMonth, endOfMonth, eachDayOfInterval, getDay, isSameDay, isToday, isAfter, isBefore } from 'date-fns';
 
 const TIME_SLOTS = [
-  { start: '09:00', end: '12:00', label: '9:00 AM - 12:00 PM' },
+  { start: '10:00', end: '12:00', label: '10:00 AM - 12:00 PM' },
   { start: '12:00', end: '15:00', label: '12:00 PM - 3:00 PM' },
   { start: '15:00', end: '18:00', label: '3:00 PM - 6:00 PM' },
 ];
