@@ -3,7 +3,7 @@ export type { ApiError } from './client';
 export {
   sendSignupOtp, sendLoginOtp, signup, login, logout,
   fetchProfileWithToken, refreshAccessToken, forgotPassword, resetPassword,
-  googleNativeAuth,
+  googleNativeAuth, updateProfile,
 } from './auth';
 export type {
   User,

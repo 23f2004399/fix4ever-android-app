@@ -141,6 +141,19 @@ export async function refreshAccessToken(refreshToken: string) {
   });
 }
 
+/** Update profile (Name, Phone). */
+export async function updateProfile(token: string, params: { username: string; phone: string }) {
+  return requestWithAuth<{ success: boolean; message: string; user: User }>(
+    `${AUTH}/update-profile`,
+    token,
+    {
+      method: 'PUT',
+      body: params,
+      headers: { 'Content-Type': 'application/json' },
+    }
+  );
+}
+
 export type GoogleNativeAuthResponse = {
   success: boolean;
   // New user — needs to complete profile

@@ -443,6 +443,7 @@ export function HomeScreen( { navigation }: HomeScreenProps) {
     <SafeAreaProvider>
       <View style={{ flex: 1, backgroundColor: isDark ? '#242D3B' : '#FFFFFF' }}>
         <AppBar 
+          transparent
           isLoggedIn={!!user}
           user={user}
           onLoginPress={() => navigation.navigate('Auth', { screen: 'Login' })} 

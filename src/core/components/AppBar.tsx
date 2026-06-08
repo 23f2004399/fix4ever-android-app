@@ -22,6 +22,7 @@ type AppBarProps = {
   onNotificationsPress: () => void;
   onLogoutPress: () => void;
   onOpenTerms?: () => void;
+  transparent?: boolean;
 };
 
 export function AppBar({
@@ -33,6 +34,7 @@ export function AppBar({
   onNotificationsPress,
   onLogoutPress,
   onOpenTerms,
+  transparent,
 }: AppBarProps) {
   const insets = useSafeAreaInsets();
   const { colors, spacing, typography } = useTheme();
@@ -61,8 +63,9 @@ export function AppBar({
         {
           paddingTop: insets.top + spacing.sm,
           paddingHorizontal: spacing.lg,
-          backgroundColor: colors.background,
+          backgroundColor: transparent ? 'transparent' : colors.background,
           borderBottomColor: colors.border,
+          borderBottomWidth: 1,
         },
       ]}
     >
