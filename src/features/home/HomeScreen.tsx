@@ -14,6 +14,7 @@ import {
 import Icon from 'react-native-vector-icons/Feather';
 import MobileLaptop from '../../assets/icons/mobile-laptop.svg';
 import { SafeAreaProvider, useSafeAreaInsets } from 'react-native-safe-area-context';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { NativeStackNavigationProp } from '@react-navigation/native-stack';
 import { CompositeNavigationProp } from '@react-navigation/native';
 import { BottomTabNavigationProp } from '@react-navigation/bottom-tabs';
@@ -102,6 +103,11 @@ export function HomeScreen( { navigation }: HomeScreenProps) {
   const handleLogout = async () => {
     try {
       await logout();
+      try {
+        await GoogleSignin.signOut();
+      } catch (signOutError) {
+        console.warn('Google sign-out failed:', signOutError);
+      }
       clearAuth();
       setUser(null);
     } catch (error) {

@@ -1,11 +1,16 @@
 export { request, requestWithAuth } from './client';
 export type { ApiError } from './client';
-export { sendSignupOtp, sendLoginOtp, signup, login, logout } from './auth';
+export {
+  sendSignupOtp, sendLoginOtp, signup, login, logout,
+  fetchProfileWithToken, refreshAccessToken, forgotPassword, resetPassword,
+  googleNativeAuth,
+} from './auth';
 export type {
   User,
   LoginResponse,
   SignupResponse,
   SendOtpResponse,
+  GoogleNativeAuthResponse,
 } from './auth';
 export {
   saveDraftServiceRequest,

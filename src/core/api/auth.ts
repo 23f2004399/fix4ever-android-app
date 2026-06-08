@@ -140,3 +140,33 @@ export async function refreshAccessToken(refreshToken: string) {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+export type GoogleNativeAuthResponse = {
+  success: boolean;
+  // New user — needs to complete profile
+  isNewUser?: boolean;
+  prefillName?: string;
+  prefillEmail?: string;
+  // Authenticated user
+  token?: string;
+  refreshToken?: string;
+  user?: User;
+  message?: string;
+};
+
+/**
+ * Verify a Google idToken from the native mobile SDK.
+ * - Call with just idToken first. If response.isNewUser is true, collect phone + username
+ *   and call again with all three fields to create the account.
+ */
+export async function googleNativeAuth(params: {
+  idToken: string;
+  phone?: string;
+  username?: string;
+}) {
+  return request<GoogleNativeAuthResponse>(`${AUTH}/google/native`, {
+    method: 'POST',
+    body: params,
+    headers: { 'Content-Type': 'application/json' },
+  });
+}

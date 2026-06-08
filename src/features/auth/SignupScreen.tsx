@@ -226,15 +226,6 @@ export function SignupScreen({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={onBack}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
-        </View>
         <Text style={styles.title}>Create account</Text>
         <Text style={styles.subtitle}>
           Enter your details. We'll send a verification code to your email.

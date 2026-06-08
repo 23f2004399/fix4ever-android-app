@@ -3,6 +3,7 @@ import { View, Text, TouchableOpacity } from 'react-native';
 import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Icon from 'react-native-vector-icons/Feather';
+import { GoogleSignin } from '@react-native-google-signin/google-signin';
 import { useAuth } from '../../lib/contexts/auth-context';
 import { useTheme } from '../../core/theme';
 import { ThemeSelector } from '../../core/components/ThemeSelector';
@@ -134,6 +135,11 @@ export default function AuthStack({ route }: { route: { params?: { screen?: stri
                     <AccountScreen
                         onLogout={async () => {
                             console.log('Logout');
+                            try {
+                              await GoogleSignin.signOut();
+                            } catch (e) {
+                              console.warn('Google sign-out failed:', e);
+                            }
                             await clearAuth();
                             props.navigation.navigate('Login');
                         }}
