@@ -10,6 +10,7 @@ import {
   Modal,
   Pressable,
   FlatList,
+  TouchableWithoutFeedback,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import MobileLaptop from '../../assets/icons/mobile-laptop.svg';
@@ -332,8 +333,7 @@ export function HomeScreen( { navigation }: HomeScreenProps) {
           backgroundColor: colors.background,
           borderTopLeftRadius: 24,
           borderTopRightRadius: 24,
-          paddingBottom: insets.bottom + 24,
-          maxHeight: '90%',
+          maxHeight: '85%', // restrict height so it scrolls
         },
         sheetHandle: {
           width: 40,
@@ -567,56 +567,57 @@ export function HomeScreen( { navigation }: HomeScreenProps) {
         </View>
       </ScrollView>
 
-      {/* Quick Services Bottom Sheet */}
       <Modal
         visible={showServicesSheet}
         transparent
         animationType="slide"
         onRequestClose={() => setShowServicesSheet(false)}
       >
-        <Pressable style={styles.sheetOverlay} onPress={() => setShowServicesSheet(false)}>
-          <Pressable onPress={() => {}} style={styles.sheet}>
-            <View style={styles.sheetHandle} />
+        <TouchableOpacity 
+          style={styles.sheetOverlay} 
+          activeOpacity={1} 
+          onPressOut={() => setShowServicesSheet(false)}
+        >
+          <TouchableWithoutFeedback>
+            <View style={styles.sheet}>
+              <View style={styles.sheetHandle} />
 
-            <View style={styles.sheetHeader}>
-              <View style={styles.sheetBadge}>
-                <Icon name="grid" size={12} color={colors.mutedForeground} />
-                <Text style={styles.sheetBadgeText}>Quick service</Text>
-              </View>
-              <Text style={styles.sheetTitle}>What's wrong with your laptop?</Text>
-              <Text style={styles.sheetSubtitle}>Tap an issue to submit a service request instantly</Text>
-            </View>
-
-            <View style={styles.grid}>
-              {Array.from({ length: Math.ceil(QUICK_SERVICES.length / 2) }, (_, rowIdx) => (
-                <View key={rowIdx} style={styles.gridRow}>
-                  {QUICK_SERVICES.slice(rowIdx * 2, rowIdx * 2 + 2).map(service => (
-                    <TouchableOpacity
-                      key={service.id}
-                      style={styles.tile}
-                      activeOpacity={0.75}
-                      onPress={() => {
-                        setShowServicesSheet(false);
-                        navigation.navigate('ServiceRequestStack');
-                      }}
-                    >
-                      <View style={[styles.tileIconWrap, { backgroundColor: service.color + '22' }]}>
-                        <Icon name={service.icon} size={20} color={service.color} />
-                      </View>
-                      <Text style={styles.tileTitle}>{service.title}</Text>
-                      <Text style={styles.tileSubtitle}>{service.subtitle}</Text>
-                    </TouchableOpacity>
-                  ))}
+              <View style={styles.sheetHeader}>
+                <View style={styles.sheetBadge}>
+                  <Icon name="grid" size={12} color={colors.mutedForeground} />
+                  <Text style={styles.sheetBadgeText}>Quick service</Text>
                 </View>
-              ))}
-            </View>
+                <Text style={styles.sheetTitle}>What's wrong with your laptop?</Text>
+                <Text style={styles.sheetSubtitle}>We offer a wide range of repairs for any issue</Text>
+              </View>
 
-            <View style={styles.sheetFooter}>
-              <Icon name="grid" size={12} color={colors.textMuted} />
-              <Text style={styles.sheetFooterText}>Tap any button to see the service form</Text>
+              <ScrollView 
+                style={{ flexShrink: 1 }} 
+                contentContainerStyle={styles.grid}
+                showsVerticalScrollIndicator={false}
+              >
+                {Array.from({ length: Math.ceil(QUICK_SERVICES.length / 2) }, (_, rowIdx) => (
+                  <View key={rowIdx} style={styles.gridRow}>
+                    {QUICK_SERVICES.slice(rowIdx * 2, rowIdx * 2 + 2).map(service => (
+                      <TouchableOpacity
+                        key={service.id}
+                        style={styles.tile}
+                        activeOpacity={0.95}
+                        onPress={() => {}}
+                      >
+                        <View style={[styles.tileIconWrap, { backgroundColor: service.color + '22' }]}>
+                          <Icon name={service.icon} size={20} color={service.color} />
+                        </View>
+                        <Text style={styles.tileTitle}>{service.title}</Text>
+                        <Text style={styles.tileSubtitle}>{service.subtitle}</Text>
+                      </TouchableOpacity>
+                    ))}
+                  </View>
+                ))}
+              </ScrollView>
             </View>
-          </Pressable>
-        </Pressable>
+          </TouchableWithoutFeedback>
+        </TouchableOpacity>
       </Modal>
       </View>
       </View>
