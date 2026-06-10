@@ -231,7 +231,7 @@ export function TrackerScreen() {
     try {
       const token = await getStoredToken();
       if (!token) return;
-      const response = await requestWithAuth(
+      const response = await requestWithAuth<any>(
         `/service-requests/${requestId}/simulate-payment-ready`,
         token,
         { method: 'POST' }
@@ -934,7 +934,7 @@ export function TrackerScreen() {
                 .join(', ') || 'N/A';
 
               return (
-                <ScrollView style={styles.modalScroll} showsVerticalScrollIndicator={false}>
+                <ScrollView contentContainerStyle={styles.modalScroll} showsVerticalScrollIndicator={false}>
                   <View style={styles.modalHeaderRow}>
                     <View style={styles.modalTitleWrap}>
                       <Text style={styles.modalTitle}>{selectedRequest.brand} {selectedRequest.model}</Text>
