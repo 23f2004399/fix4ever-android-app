@@ -38,12 +38,12 @@ interface ServiceRequestTimerProps {
 }
 
 const RETRY_REASONS = [
-  { id: 'no_response', label: 'No technicians responded', icon: '⏰' },
-  { id: 'wrong_location', label: 'Wrong location entered', icon: '📍' },
-  { id: 'wrong_device', label: 'Wrong device details', icon: '💻' },
-  { id: 'urgent_need', label: 'Need urgent service', icon: '🚨' },
-  { id: 'price_issue', label: 'Price too high', icon: '💰' },
-  { id: 'other', label: 'Other reason', icon: '❓' },
+  { id: 'no_response', label: 'No technicians responded', icon: 'clock' },
+  { id: 'wrong_location', label: 'Wrong location entered', icon: 'map-pin' },
+  { id: 'wrong_device', label: 'Wrong device details', icon: 'monitor' },
+  { id: 'urgent_need', label: 'Need urgent service', icon: 'alert-circle' },
+  { id: 'price_issue', label: 'Price too high', icon: 'dollar-sign' },
+  { id: 'other', label: 'Other reason', icon: 'help-circle' },
 ];
 
 export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps) {
@@ -332,20 +332,28 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
     },
     modalActions: {
       flexDirection: 'row',
-      gap: 8,
-      marginTop: 16,
+      gap: 12,
+      marginTop: 20,
     },
     modalButton: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: 6,
+      paddingVertical: 12,
+      borderRadius: 10,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     modalButtonCancel: {
-      backgroundColor: colors.muted,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : colors.card,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
     },
     modalButtonConfirm: {
       backgroundColor: primaryBlue,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
     },
     modalButtonText: {
       ...typography.bodySmall,
@@ -468,7 +476,12 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
                   selectedReason === reason.id && styles.reasonButtonSelected,
                 ]}
               >
-                <Text style={styles.reasonIcon}>{reason.icon}</Text>
+                <Icon 
+                  name={reason.icon} 
+                  size={18} 
+                  color={selectedReason === reason.id ? primaryBlue : colors.mutedForeground} 
+                  style={{ marginRight: 12 }} 
+                />
                 <Text style={styles.reasonText}>{reason.label}</Text>
               </TouchableOpacity>
             ))}
@@ -479,7 +492,7 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
                   setShowRetryModal(false);
                   setSelectedReason('');
                 }}
-                style={styles.modalButtonCancel}
+                style={[styles.modalButton, styles.modalButtonCancel]}
               >
                 <Text style={[styles.modalButtonText, styles.modalButtonTextCancel]}>
                   Cancel
@@ -488,7 +501,7 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
               <TouchableOpacity
                 onPress={handleRetry}
                 disabled={!selectedReason || isRetrying}
-                style={[styles.modalButtonConfirm, (!selectedReason || isRetrying) && styles.actionButtonDisabled]}
+                style={[styles.modalButton, styles.modalButtonConfirm, (!selectedReason || isRetrying) && styles.actionButtonDisabled]}
               >
                 <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
                   {isRetrying ? 'Retrying...' : 'Retry'}
