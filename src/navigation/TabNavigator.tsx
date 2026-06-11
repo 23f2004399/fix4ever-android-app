@@ -99,45 +99,81 @@ const CustomTabBar = ({ state, descriptors, navigation }: BottomTabBarProps) => 
           }
         };
 
+        const isCenterButton = index === 2;
+
         return (
           <TouchableOpacity
             key={route.key}
             onPress={onPress}
-            style={{ flex: 1, alignItems: 'center', paddingVertical: 4 }}
-            activeOpacity={0.7}
+            style={{ flex: 1, alignItems: 'center', paddingVertical: isCenterButton ? 0 : 4 }}
+            activeOpacity={isCenterButton ? 0.9 : 0.7}
           >
-            <View style={{ alignItems: 'center', justifyContent: 'center' }}>
-              <Animated.View
-                style={{
-                  position: 'absolute',
-                  width: 40,
-                  height: 40,
-                  borderRadius: 20,
+            {isCenterButton ? (
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <Animated.View style={{
+                  top: -22,
+                  width: 56,
+                  height: 56,
+                  borderRadius: 28,
                   backgroundColor: colors.primary,
-                  opacity: animations.glowOpacity,
-                  transform: [{ scale: animations.glowScale }],
-                }}
-              />
-              
-              <Animated.View style={{ transform: [{ scale: animations.scale }] }}>
-                <Icon
-                  name={tab.icon}
-                  size={24}
-                  color={isFocused ? colors.primary : inactiveColor}
+                  justifyContent: 'center',
+                  alignItems: 'center',
+                  borderWidth: 4,
+                  borderColor: barBackground,
+                  shadowColor: colors.primary,
+                  shadowOffset: { width: 0, height: 6 },
+                  shadowOpacity: 0.3,
+                  shadowRadius: 8,
+                  elevation: 5,
+                  transform: [{ scale: animations.scale }]
+                }}>
+                  <Icon name={tab.icon} size={26} color="#FFFFFF" />
+                </Animated.View>
+                <Animated.Text
+                  style={{
+                    fontSize: 10,
+                    marginTop: -16,
+                    color: isFocused ? colors.primary : inactiveColor,
+                    transform: [{ translateY: animations.labelY }],
+                  }}
+                >
+                  {tab.label}
+                </Animated.Text>
+              </View>
+            ) : (
+              <View style={{ alignItems: 'center', justifyContent: 'center' }}>
+                <Animated.View
+                  style={{
+                    position: 'absolute',
+                    width: 40,
+                    height: 40,
+                    borderRadius: 20,
+                    backgroundColor: colors.primary,
+                    opacity: animations.glowOpacity,
+                    transform: [{ scale: animations.glowScale }],
+                  }}
                 />
-              </Animated.View>
+                
+                <Animated.View style={{ transform: [{ scale: animations.scale }] }}>
+                  <Icon
+                    name={tab.icon}
+                    size={24}
+                    color={isFocused ? colors.primary : inactiveColor}
+                  />
+                </Animated.View>
 
-              <Animated.Text
-                style={{
-                  fontSize: 11,
-                  marginTop: 2,
-                  color: isFocused ? colors.primary : inactiveColor,
-                  transform: [{ translateY: animations.labelY }],
-                }}
-              >
-                {tab.label}
-              </Animated.Text>
-            </View>
+                <Animated.Text
+                  style={{
+                    fontSize: 11,
+                    marginTop: 2,
+                    color: isFocused ? colors.primary : inactiveColor,
+                    transform: [{ translateY: animations.labelY }],
+                  }}
+                >
+                  {tab.label}
+                </Animated.Text>
+              </View>
+            )}
           </TouchableOpacity>
         );
       })}

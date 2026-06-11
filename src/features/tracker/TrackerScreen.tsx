@@ -14,7 +14,7 @@ import {
 } from 'react-native';
 import PaymentForm from '../service-requests/PaymentForm';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useNavigation } from '@react-navigation/native';
+import { useNavigation, useFocusEffect } from '@react-navigation/native';
 import Icon from 'react-native-vector-icons/Feather';
 
 import { useTheme } from '../../core/theme';
@@ -98,9 +98,7 @@ const normalizeStatus = (status: string): TrackerStatus => {
   return 'Pending';
 };
 
-const isOngoingStatus = (status: TrackerStatus): boolean => {
-  return status === 'Pending' || status === 'Assigned' || status === 'In Progress' || status === 'Completed';
-};
+// removed isOngoingStatus since we want to show all requests including Cancelled
 
 const getProgressPercentage = (status: TrackerStatus, rawStatus: string): number => {
   const normalizedRaw = (rawStatus || '').toLowerCase();
@@ -207,11 +205,10 @@ export function TrackerScreen() {
             ? response.data.data
             : response.data.requests || [];
 
-        const ongoing = dataRows
-          .filter((item) => isOngoingStatus(normalizeStatus(item.status)))
+        const sortedRequests = dataRows
           .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
-        setRequests(ongoing);
+        setRequests(sortedRequests);
       } else {
         setRequests([]);
       }
@@ -222,9 +219,11 @@ export function TrackerScreen() {
     }
   }, [navigation]);
 
-  React.useEffect(() => {
-    getTrackerRequests();
-  }, [getTrackerRequests]);
+  useFocusEffect(
+    useCallback(() => {
+      getTrackerRequests();
+    }, [getTrackerRequests])
+  );
 
   const simulatePaymentReady = useCallback(async (requestId: string) => {
     setIsSimulating(true);
@@ -908,7 +907,7 @@ export function TrackerScreen() {
                   </View>
 
                   <Pressable style={styles.viewDetailsButton} onPress={() => setSelectedRequest(request)}>
-                    <Text style={styles.viewDetailsText}>View Details</Text>
+                    <Text style={styles.viewDetailsText}>View</Text>
                   </Pressable>
                 </View>
               </TouchableOpacity>
@@ -947,23 +946,40 @@ export function TrackerScreen() {
 
                   <Text style={styles.modalSectionTitle}>Status Timeline</Text>
                   <View style={styles.statusSteps}>
-                    {STATUS_STEPS.map((step, index) => {
-                      const isCurrent = index === timelineIndex;
-                      const stepColor = isCurrent ? bodyText : labelColor;
-                      const iconColor = isCurrent ? primaryBlue : labelColor;
+                    {(() => {
+                      const isCancelled = statusLabel === 'Cancelled' || statusLabel === 'Expired';
+                      const stepsToRender = isCancelled 
+                        ? ['Request Submitted', statusLabel]
+                        : STATUS_STEPS;
+                      
+                      const activeIndex = isCancelled ? 1 : timelineIndex;
 
-                      return (
-                        <View key={step} style={styles.timelineRow}>
-                          <View style={styles.timelineIconWrap}>
-                            <Icon name={isCurrent ? 'check-circle' : 'circle'} size={14} color={iconColor} />
+                      return stepsToRender.map((step, index) => {
+                        const isCurrent = index === activeIndex;
+                        const isCompleted = index <= activeIndex;
+                        
+                        const stepColor = isCurrent ? bodyText : labelColor;
+                        
+                        let iconColor = labelColor;
+                        if (isCompleted) {
+                          iconColor = isCancelled && isCurrent ? '#EF4444' : primaryBlue; // Red if cancelled
+                        }
+
+                        const iconName = isCompleted ? 'check-circle' : 'circle';
+
+                        return (
+                          <View key={step} style={styles.timelineRow}>
+                            <View style={styles.timelineIconWrap}>
+                              <Icon name={iconName} size={14} color={iconColor} />
+                            </View>
+                            <View style={styles.timelineTextWrap}>
+                              <Text style={[styles.timelineText, { color: stepColor }]}>{step}</Text>
+                              {isCurrent && !isCancelled ? <Text style={styles.currentStatusTag}>Current status</Text> : null}
+                            </View>
                           </View>
-                          <View style={styles.timelineTextWrap}>
-                            <Text style={[styles.timelineText, { color: stepColor }]}>{step}</Text>
-                            {isCurrent ? <Text style={styles.currentStatusTag}>Current status</Text> : null}
-                          </View>
-                        </View>
-                      );
-                    })}
+                        );
+                      });
+                    })()}
                   </View>
 
                   <View style={styles.detailsSplitRow}>
