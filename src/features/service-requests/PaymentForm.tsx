@@ -55,6 +55,25 @@ export default function PaymentForm({
   const [transactionId, setTransactionId] = useState("");
   const [orderId, setOrderId] = useState("");
 
+  const [warrantyPlan, setWarrantyPlan] = useState<'None' | '1 Month' | '2 Months' | '3 Months'>('None');
+  const [warrantyAcceptedTerms, setWarrantyAcceptedTerms] = useState(false);
+
+  const getWarrantyPrice = () => {
+    if (warrantyPlan === '1 Month') return 399;
+    if (warrantyPlan === '2 Months') return 699;
+    if (warrantyPlan === '3 Months') return 999;
+    return 0;
+  };
+
+  const getWarrantyValidityDays = () => {
+    if (warrantyPlan === '1 Month') return 30;
+    if (warrantyPlan === '2 Months') return 60;
+    if (warrantyPlan === '3 Months') return 90;
+    return 0;
+  };
+
+  const totalAmount = amount + getWarrantyPrice();
+
   useEffect(() => {
     // Set up payment callbacks
     CFPaymentGatewayService.setCallback({
@@ -98,9 +117,9 @@ export default function PaymentForm({
       },
     
       onError: (error: CFErrorResponse, orderID: string) => {
-        console.log('Payment onError:', error, 'Order ID:', orderID);
+        console.log('Payment onError:', error.getMessage(), 'Order ID:', orderID);
         setIsProcessing(false);
-        const msg = (error.message || '').toLowerCase();
+        const msg = (error.getMessage() || '').toLowerCase();
         const isCancelled =
           msg.includes('cancel') ||
           msg.includes('back') ||
@@ -108,7 +127,7 @@ export default function PaymentForm({
           msg.includes('user_back') ||
           msg.includes('closed');
         if (!isCancelled) {
-          Alert.alert('Payment Failed', error.message || 'Payment could not be completed. Please try again.');
+          Alert.alert('Payment Failed', error.getMessage() || 'Payment could not be completed. Please try again.');
         }
         // Cancellation: silently reset — user chose to go back, no alert needed
       },
@@ -121,8 +140,13 @@ export default function PaymentForm({
   }, [onPaymentComplete]);
 
   const handlePayment = async () => {
-    if (amount <= 0) {
+    if (totalAmount <= 0) {
       Alert.alert('Error', 'Invalid payment amount');
+      return;
+    }
+
+    if (warrantyPlan !== 'None' && !warrantyAcceptedTerms) {
+      Alert.alert('Terms Required', 'Please accept the warranty terms before proceeding.');
       return;
     }
 
@@ -145,8 +169,12 @@ export default function PaymentForm({
           body: {
             serviceRequestId,
             vendorId,
-            amount,
+            amount: totalAmount,
             paymentMethod: 'Cashfree',
+            warrantyAddonSelected: warrantyPlan !== 'None',
+            warrantyPlanName: warrantyPlan,
+            warrantyAmount: getWarrantyPrice(),
+            warrantyValidityDays: getWarrantyValidityDays(),
           },
         }
       );
@@ -161,7 +189,7 @@ export default function PaymentForm({
         console.log(orderId)
         setPaymentSessionId(sessionId);
         setOrderId(orderId);
-        setTransactionId(transactionId);
+        setTransactionId(transactionId || '');
 
         try {
           // Create CFSession object using constructor
@@ -235,12 +263,10 @@ export default function PaymentForm({
 
   return (
     <View style={{ gap: spacing.lg }}>
-      <View style={{ alignItems: 'center' }}>
-        <Text style={{ fontSize: 20, fontWeight: 'bold', marginBottom: spacing.sm }}>
-          Complete Payment
-        </Text>
-        <Text style={{ fontSize: 14, color: colors.mutedForeground }}>
-          Secure payment powered by Cashfree
+      <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
+        <Icon name="shield" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
+        <Text style={{ fontSize: 15, color: colors.mutedForeground, textAlign: 'center', paddingHorizontal: spacing.xl }}>
+          Secure, encrypted transactions powered by Cashfree.
         </Text>
       </View>
 
@@ -272,12 +298,88 @@ export default function PaymentForm({
               Total Amount
             </Text>
             <Text style={{ fontSize: 12, color: colors.mutedForeground }}>
-              Service charge
+              Service charge {warrantyPlan !== 'None' ? `+ ${warrantyPlan} Warranty` : ''}
             </Text>
           </View>
           <Text style={{ fontSize: 20, fontWeight: 'bold', color: colors.primary }}>
-            ₹{amount.toFixed(2)}
+            ₹{totalAmount.toFixed(2)}
           </Text>
+        </View>
+
+        {/* Service Warranty Add-on */}
+        <View style={{ marginBottom: spacing.md }}>
+          <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground, marginBottom: spacing.sm }}>
+            Service Warranty Add-on
+          </Text>
+          <Text style={{ fontSize: 12, color: colors.mutedForeground, marginBottom: spacing.md }}>
+            Protect your repair service with Fix4Ever service warranty. Covers service charges only for the same issue.
+          </Text>
+
+          {/* Plan Selection Cards */}
+          <View style={{ flexDirection: 'row', gap: spacing.sm, flexWrap: 'wrap' }}>
+            {[
+              { id: 'None', label: 'No Warranty', price: 0 },
+              { id: '1 Month', label: '1 Month', price: 399 },
+              { id: '2 Months', label: '2 Months', price: 699 },
+              { id: '3 Months', label: '3 Months', price: 999 },
+            ].map((plan) => {
+              const isSelected = warrantyPlan === plan.id;
+              return (
+                <TouchableOpacity
+                  key={plan.id}
+                  onPress={() => {
+                    setWarrantyPlan(plan.id as any);
+                    if (plan.id === 'None') setWarrantyAcceptedTerms(false);
+                  }}
+                  style={{
+                    flex: 1,
+                    minWidth: '45%',
+                    padding: spacing.sm,
+                    borderWidth: 1.5,
+                    borderColor: isSelected ? colors.primary : colors.border,
+                    borderRadius: 8,
+                    backgroundColor: isSelected ? colors.primary + '10' : colors.card,
+                    alignItems: 'center',
+                  }}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: isSelected ? 'bold' : '500', color: isSelected ? colors.primary : colors.foreground }}>
+                    {plan.label}
+                  </Text>
+                  {plan.price > 0 && (
+                    <Text style={{ fontSize: 12, color: isSelected ? colors.primary : colors.mutedForeground, marginTop: 4 }}>
+                      +₹{plan.price}
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+
+          {/* Mandatory Checkbox */}
+          {warrantyPlan !== 'None' && (
+            <TouchableOpacity
+              onPress={() => setWarrantyAcceptedTerms(!warrantyAcceptedTerms)}
+              style={{
+                flexDirection: 'row',
+                alignItems: 'flex-start',
+                marginTop: spacing.md,
+                gap: spacing.sm,
+                backgroundColor: colors.muted + '10',
+                padding: spacing.sm,
+                borderRadius: 8,
+              }}
+            >
+              <Icon 
+                name={warrantyAcceptedTerms ? "check-square" : "square"} 
+                size={20} 
+                color={warrantyAcceptedTerms ? colors.primary : colors.mutedForeground} 
+                style={{ marginTop: 2 }}
+              />
+              <Text style={{ fontSize: 12, color: colors.foreground, flex: 1, lineHeight: 18 }}>
+                I understand this warranty covers service charges only for the same issue and does not cover parts or new issues.
+              </Text>
+            </TouchableOpacity>
+          )}
         </View>
 
         <View style={{
@@ -355,10 +457,15 @@ export default function PaymentForm({
               alignItems: 'center',
               justifyContent: 'center',
               gap: spacing.sm,
-              backgroundColor: colors.success,
-              borderRadius: 8,
-              paddingVertical: spacing.sm,
+              backgroundColor: colors.primary,
+              borderRadius: 12,
+              paddingVertical: spacing.md,
               paddingHorizontal: spacing.md,
+              shadowColor: colors.primary,
+              shadowOffset: { width: 0, height: 4 },
+              shadowOpacity: 0.2,
+              shadowRadius: 8,
+              elevation: 4,
             }}
             onPress={handlePayment}
             disabled={isProcessing}
@@ -366,15 +473,15 @@ export default function PaymentForm({
             {isProcessing ? (
               <>
                 <ActivityIndicator size="small" color="#FFFFFF" />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
                   Processing...
                 </Text>
               </>
             ) : (
               <>
-                <Icon name="lock" size={16} color="#FFFFFF" />
-                <Text style={{ fontSize: 14, fontWeight: '600', color: '#FFFFFF' }}>
-                  Pay Now ₹{amount.toFixed(2)}
+                <Icon name="lock" size={18} color="#FFFFFF" />
+                <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
+                  Pay ₹{amount.toFixed(2)}
                 </Text>
               </>
             )}
@@ -391,7 +498,7 @@ export default function PaymentForm({
               onPress={onCancel}
               disabled={isProcessing}
             >
-              <Text style={{ fontSize: 14, color: colors.foreground }}>
+              <Text style={{ fontSize: 15, fontWeight: '600', color: colors.foreground }}>
                 Cancel
               </Text>
             </TouchableOpacity>

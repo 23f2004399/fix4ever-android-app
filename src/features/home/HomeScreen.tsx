@@ -57,6 +57,8 @@ export type RootStackParamList = {
   ServiceRequestStack: { draftId?: string } | undefined;
   ServiceRequestDetails: { requestId: string };
   CreateServiceRequestScreen: undefined;
+  Notifications: undefined;
+  TermsAndPolicies: undefined;
 };
 
 type HomeScreenProps = {
@@ -449,19 +451,15 @@ export function HomeScreen( { navigation }: HomeScreenProps) {
           onLoginPress={() => navigation.navigate('Auth', { screen: 'Login' })} 
           onSignupPress={() => navigation.navigate('Auth', { screen: 'Signup' })}
           onProfilePress={() => navigation.navigate('Auth', { screen: 'Account' })} 
-          onNotificationsPress={() =>
-            Alert.alert(
-              'Notifications',
-              'Your notifications will appear here soon.'
-            )
-          }
+          onNotificationsPress={() => {
+            if (user) {
+              navigation.navigate('Notifications');
+            } else {
+              Alert.alert('Notifications', 'Please login to view notifications.');
+            }
+          }}
           onLogoutPress={handleLogout}
-          onOpenTerms={() =>
-            Alert.alert(
-              'Terms & policies',
-              'Link to detailed terms and privacy policy will go here.'
-            )
-          }
+          onOpenTerms={() => navigation.navigate('TermsAndPolicies')}
         />
       <View style={{ flex: 1, position: 'relative' }}>
         {/* Background Illustration - Fixed at bottom */}

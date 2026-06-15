@@ -17,6 +17,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../core/theme';
 import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
 import { ServiceRequestStack } from '../features/create-request/ServiceRequestStack';
+import { FloatingDraftsCounter } from '../core/components';
 
 const Tab = createBottomTabNavigator();
 const Stack = createNativeStackNavigator();
@@ -229,29 +230,30 @@ function MainTabs() {
         </Tab.Navigator>
     )
 }
-
 export default function NavigationTab() {
   const { colors, isDark } = useTheme();
 
     return (
-        <Stack.Navigator screenOptions={{ headerShown: false }}>
-            <Stack.Screen name="Main" component={MainTabs} options={{ navigationBarColor: isDark ? '#111B2D' : colors.card }} />
-            <Stack.Screen name="ServiceRequestDetails" component={ServiceRequestDetailsScreen} options={{ headerShown: false}} />
-            <Stack.Screen 
-                name="Auth" 
-                component={AuthStack} 
-                options={({ route }) => {
-                    const routeName = getFocusedRouteNameFromRoute(route) ?? 'Login';
-                    return {
-                        headerShown: false,
-                        navigationBarColor: routeName === 'Account' ? (isDark ? '#242D3B' : colors.background) : colors.background,
-                    };
-                }}
-            />
-            <Stack.Screen name="CreateServiceRequestScreen" component={CreateServiceRequestScreen} options={{ headerShown: false }} />
-            <Stack.Screen name="ServiceRequestStack" component={ServiceRequestStack} options={{ headerShown: false }} />
-            <Stack.Screen name="OnsiteChat" component={OnsiteChatScreen} options={{ headerShown: false }} />
-        </Stack.Navigator>
+        <>
+            <Stack.Navigator screenOptions={{ headerShown: false }}>
+                <Stack.Screen name="Main" component={MainTabs} options={{ navigationBarColor: isDark ? '#111B2D' : colors.card }} />
+                <Stack.Screen name="ServiceRequestDetails" component={ServiceRequestDetailsScreen} options={{ headerShown: false}} />
+                <Stack.Screen 
+                    name="Auth" 
+                    component={AuthStack} 
+                    options={({ route }) => {
+                        const routeName = getFocusedRouteNameFromRoute(route) ?? 'Login';
+                        return {
+                            headerShown: false,
+                            navigationBarColor: routeName === 'Account' ? (isDark ? '#242D3B' : colors.background) : colors.background,
+                        };
+                    }}
+                />
+                <Stack.Screen name="CreateServiceRequestScreen" component={CreateServiceRequestScreen} options={{ headerShown: false }} />
+                <Stack.Screen name="ServiceRequestStack" component={ServiceRequestStack} options={{ headerShown: false }} />
+                <Stack.Screen name="OnsiteChat" component={OnsiteChatScreen} options={{ headerShown: false }} />
+            </Stack.Navigator>
+            <FloatingDraftsCounter />
+        </>
     )
 }
-

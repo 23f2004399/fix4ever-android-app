@@ -40,6 +40,7 @@ interface ServiceRequest {
   userId: string;
   title?: string;
   description?: string;
+  category?: string;
   brand: string;
   model: string;
   problemDescription: string;
@@ -152,6 +153,14 @@ interface ServiceRequest {
   acceptedAt?: string;
   paymentStatus?: 'pending' | 'completed' | 'failed';
   paymentTransactionId?: string;
+  // Warranty fields
+  warrantyStatus?: 'not_purchased' | 'pending_activation' | 'active' | 'expired' | 'claim_raised' | 'void';
+  warrantyPlanName?: string;
+  warrantyAmount?: number;
+  warrantyStartDate?: string;
+  warrantyEndDate?: string;
+  claimId?: string;
+  claimVerificationStatus?: string;
   // Scheduling fields
   scheduledDate?: string;
   scheduledTime?: string;
@@ -282,6 +291,20 @@ interface ServiceRequest {
       max: number;
     };
     breakdown?: string[];
+    serviceTypeFee?: number;
+    urgencyFee?: number;
+    urgencyLevel?: string;
+    warrantyFee?: number;
+    warrantyOption?: string;
+    dataSafetyFee?: number;
+  };
+  paymentBreakdown?: {
+    totalCost?: number;
+    technicianEarnings?: number;
+    companyCommission?: number;
+    componentCost?: number;
+    platformFee?: number;
+    taxes?: number;
   };
 }
 
@@ -354,6 +377,12 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
   const [showImageModal, setShowImageModal] = useState(false);
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
   
+  // Warranty Claim State
+  const [showWarrantyClaimModal, setShowWarrantyClaimModal] = useState(false);
+  const [isSameIssue, setIsSameIssue] = useState<boolean | null>(null);
+  const [warrantyIssueDescription, setWarrantyIssueDescription] = useState('');
+  const [isSubmittingWarranty, setIsSubmittingWarranty] = useState(false);
+  
   // Animation values
   const timelineHeight = useRef(new Animated.Value(0)).current;
 
@@ -421,6 +450,40 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
     }
   };
 
+  const handleRaiseWarrantyClaim = async () => {
+    if (isSameIssue === null) {
+      Alert.alert('Required', 'Please specify if this is the same issue as before.');
+      return;
+    }
+    setIsSubmittingWarranty(true);
+    try {
+      const token = await getStoredToken();
+      if (!token) return;
+
+      const response = await requestWithAuth<ApiResponse>(
+        `/service-requests/${serviceRequest._id}/warranty-claim`,
+        token,
+        {
+          method: 'POST',
+          body: { isSameIssue, issueDescription: warrantyIssueDescription },
+        }
+      );
+
+      if (response.data?.success) {
+        Alert.alert('Warranty Claim Received', response.data.message);
+        setShowWarrantyClaimModal(false);
+        fetchServiceRequest();
+      } else {
+        Alert.alert('Claim Failed', response.data?.message || 'Failed to raise warranty claim');
+      }
+    } catch (error: any) {
+      const msg = error.response?.data?.message || 'Failed to raise warranty claim';
+      Alert.alert('Claim Failed', msg);
+    } finally {
+      setIsSubmittingWarranty(false);
+    }
+  };
+
   useEffect(() => {
     if (serviceRequest._id) {
       fetchServiceRequest();
@@ -442,7 +505,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
         token
       );
       
-      setHasReviewed(response.data?.hasReviewed || false);
+      setHasReviewed(response.data?.data?.hasReviewed || false);
     } catch (error) {
       console.error('Error checking review status:', error);
     }
@@ -546,7 +609,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
           method: 'POST',
           body: {
             serviceRequestId: serviceRequest._id,
-            vendorId: serviceRequest.vendorId,
+            vendorId: vendorId,
             rating: reviewRating,
             comment: reviewComment,
           }
@@ -1333,7 +1396,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
            serviceRequest.isTimerActive && 
            serviceRequest.timerExpiresAt && (
             <View style={[styles.card, styles.timerCard]}>
-              <ServiceRequestTimer serviceRequest={serviceRequest} />
+              <ServiceRequestTimer serviceRequest={serviceRequest as any} />
             </View>
           )}
 
@@ -1695,6 +1758,56 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
             </Animated.View>
           </View>
 
+          {/* Warranty Status Card */}
+          {serviceRequest.warrantyStatus && serviceRequest.warrantyStatus !== 'not_purchased' && (
+            <View style={styles.card}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, marginBottom: spacing.md }}>
+                <Icon name="shield" size={20} color={warrantyAccent} />
+                <Text style={styles.sectionTitle}>Service Warranty</Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Plan</Text>
+                <Text style={[styles.detailValue, { color: warrantyAccent, fontWeight: 'bold' }]}>
+                  {serviceRequest.warrantyPlanName}
+                </Text>
+              </View>
+              
+              <View style={styles.detailRow}>
+                <Text style={styles.detailLabel}>Status</Text>
+                <View style={{
+                  backgroundColor: 
+                    serviceRequest.warrantyStatus === 'active' ? colors.success + '20' :
+                    serviceRequest.warrantyStatus === 'expired' ? colors.error + '20' :
+                    colors.warning + '20',
+                  paddingHorizontal: 8,
+                  paddingVertical: 2,
+                  borderRadius: 4
+                }}>
+                  <Text style={{ 
+                    fontSize: 12, 
+                    fontWeight: 'bold',
+                    color: 
+                      serviceRequest.warrantyStatus === 'active' ? colors.success :
+                      serviceRequest.warrantyStatus === 'expired' ? colors.error :
+                      colors.warning 
+                  }}>
+                    {serviceRequest.warrantyStatus.replace('_', ' ').toUpperCase()}
+                  </Text>
+                </View>
+              </View>
+
+              {serviceRequest.warrantyStartDate && (
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Validity</Text>
+                  <Text style={styles.detailValue}>
+                    {new Date(serviceRequest.warrantyStartDate).toLocaleDateString()} to {new Date(serviceRequest.warrantyEndDate!).toLocaleDateString()}
+                  </Text>
+                </View>
+              )}
+            </View>
+          )}
+
           {/* Pricing Breakdown */}
           {serviceRequest.calculatedPricing && (
             <View style={styles.card}>
@@ -1734,17 +1847,17 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               )}
 
               {/* Component Cost */}
-              {serviceRequest.paymentBreakdown?.componentCost > 0 && (
+              {(serviceRequest.paymentBreakdown?.componentCost || 0) > 0 && (
                 <View style={styles.paymentRow}>
                   <Text style={{ fontSize: 14, color: mutedText, fontFamily: fonts.medium }}>Component/Parts Cost</Text>
                   <Text style={{ fontSize: 14, fontFamily: fonts.medium, color: bodyColor }}>
-                    ₹{serviceRequest.paymentBreakdown.componentCost}
+                    ₹{serviceRequest.paymentBreakdown?.componentCost}
                   </Text>
                 </View>
               )}
 
               {/* Service Type Fee */}
-              {serviceRequest.calculatedPricing.serviceTypeFee > 0 && (
+              {(serviceRequest.calculatedPricing.serviceTypeFee || 0) > 0 && (
                 <View style={styles.paymentRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                     <Icon name="truck" size={16} color={colors.primary} />
@@ -1761,7 +1874,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               )}
 
               {/* Urgency Fee */}
-              {serviceRequest.calculatedPricing.urgencyFee > 0 && (
+              {(serviceRequest.calculatedPricing.urgencyFee || 0) > 0 && (
                 <View style={styles.paymentRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                     <Icon name="zap" size={16} color={colors.warning} />
@@ -1783,7 +1896,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               )}
 
               {/* Warranty Fee */}
-              {serviceRequest.calculatedPricing.warrantyFee > 0 && (
+              {(serviceRequest.calculatedPricing.warrantyFee || 0) > 0 && (
                 <View style={styles.paymentRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                     <Icon name="shield" size={16} color={warrantyAccent} />
@@ -1805,7 +1918,7 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               )}
 
               {/* Data Safety Fee */}
-              {serviceRequest.calculatedPricing.dataSafetyFee > 0 && (
+              {(serviceRequest.calculatedPricing.dataSafetyFee || 0) > 0 && (
                 <View style={styles.paymentRow}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: spacing.sm, flex: 1 }}>
                     <Icon name="shield" size={16} color={colors.success} />
@@ -2022,6 +2135,20 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               </TouchableOpacity>
             )}
 
+            {/* Warranty Claim button for completed requests with active warranty */}
+            {serviceRequest.status === 'Completed' && 
+              serviceRequest.warrantyStatus === 'active' && (
+              <TouchableOpacity 
+                style={[styles.actionButton, { backgroundColor: warrantyAccent, borderColor: warrantyAccent }]}
+                onPress={() => setShowWarrantyClaimModal(true)}
+              >
+                <Icon name="shield" size={18} color="#FFFFFF" />
+                <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>
+                  Raise Warranty Claim
+                </Text>
+              </TouchableOpacity>
+            )}
+
             {/* Contact support */}
             <View style={styles.actionButtons}>
               <TouchableOpacity style={styles.actionButton} onPress={handleContactSupport}>
@@ -2087,6 +2214,108 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
                 <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>Submit</Text>
               </TouchableOpacity>
             </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Warranty Claim Modal */}
+      <Modal
+        visible={showWarrantyClaimModal}
+        transparent
+        animationType="slide"
+        onRequestClose={() => setShowWarrantyClaimModal(false)}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Raise Warranty Claim</Text>
+              <TouchableOpacity onPress={() => setShowWarrantyClaimModal(false)}>
+                <Icon name="x" size={24} color={colors.text} />
+              </TouchableOpacity>
+            </View>
+
+            <ScrollView contentContainerStyle={{ paddingBottom: spacing.lg }}>
+              <View style={{ backgroundColor: colors.warning + '10', padding: spacing.sm, borderRadius: 8, marginBottom: spacing.md }}>
+                <Text style={{ fontSize: 13, color: colors.warning, fontWeight: '600', marginBottom: 4 }}>Note</Text>
+                <Text style={{ fontSize: 12, color: colors.warning, lineHeight: 18 }}>
+                  Service warranty covers service charges only for the exact same issue reported previously. If it is a different issue, it will be treated as a new chargeable request.
+                </Text>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: spacing.sm }}>
+                Is this the same issue as your original repair?
+              </Text>
+
+              <View style={{ flexDirection: 'row', gap: spacing.md, marginBottom: spacing.lg }}>
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    padding: spacing.sm,
+                    borderWidth: 1,
+                    borderColor: isSameIssue === true ? colors.primary : colors.border,
+                    backgroundColor: isSameIssue === true ? colors.primary + '10' : colors.card,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setIsSameIssue(true)}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: isSameIssue === true ? 'bold' : '500', color: isSameIssue === true ? colors.primary : colors.text }}>
+                    Yes, same issue
+                  </Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={{
+                    flex: 1,
+                    padding: spacing.sm,
+                    borderWidth: 1,
+                    borderColor: isSameIssue === false ? colors.error : colors.border,
+                    backgroundColor: isSameIssue === false ? colors.error + '10' : colors.card,
+                    borderRadius: 8,
+                    alignItems: 'center',
+                  }}
+                  onPress={() => setIsSameIssue(false)}
+                >
+                  <Text style={{ fontSize: 14, fontWeight: isSameIssue === false ? 'bold' : '500', color: isSameIssue === false ? colors.error : colors.text }}>
+                    No, different issue
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              <Text style={{ fontSize: 14, fontWeight: '600', color: colors.text, marginBottom: spacing.sm }}>
+                Please describe the issue you are facing:
+              </Text>
+              <TextInput
+                style={[styles.input, styles.textArea]}
+                placeholder="Details about the problem..."
+                placeholderTextColor={mutedText}
+                value={warrantyIssueDescription}
+                onChangeText={setWarrantyIssueDescription}
+                multiline
+                numberOfLines={4}
+                textAlignVertical="top"
+              />
+
+              <TouchableOpacity
+                style={[
+                  styles.actionButton, 
+                  { 
+                    backgroundColor: warrantyAccent, 
+                    borderColor: warrantyAccent,
+                    marginTop: spacing.md,
+                    opacity: isSubmittingWarranty || isSameIssue === null ? 0.7 : 1 
+                  }
+                ]}
+                onPress={handleRaiseWarrantyClaim}
+                disabled={isSubmittingWarranty || isSameIssue === null}
+              >
+                {isSubmittingWarranty ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={[styles.actionButtonText, { color: '#FFFFFF' }]}>Submit Claim Request</Text>
+                )}
+              </TouchableOpacity>
+            </ScrollView>
           </View>
         </View>
       </Modal>

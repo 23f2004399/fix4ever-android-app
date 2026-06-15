@@ -5,7 +5,7 @@ import {
   TouchableOpacity,
   PermissionsAndroid,
   Platform,
-
+  DeviceEventEmitter
  } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //import { createStackNavigator } from '@react-navigation/stack';
@@ -429,11 +429,11 @@ export function ServiceRequestStack({
       wantsWarranty: formData.warrantyOption !== 'none',
       wantsDataSafety: formData.dataSafety,
       calculatedPricing,
-      selectedProblem: {
+      selectedProblem: formData.knowsProblem ? {
         mainProblem: formData.mainProblem,
         subProblem: formData.subProblem,
         relationalBehaviors: formData.relationalBehaviors,
-      },
+      } : {},
       problemType: formData.problemType,
       knowsProblem: formData.knowsProblem,
       location: {
@@ -528,6 +528,7 @@ export function ServiceRequestStack({
       if (savedDraftId) {
         setResolvedDraftId(savedDraftId);
         isDraftCreateInFlightRef.current = false;
+        DeviceEventEmitter.emit('refresh_drafts');
       } else if (payload.createNew) {
         isDraftCreateInFlightRef.current = false;
       }
@@ -556,7 +557,9 @@ export function ServiceRequestStack({
       beneficiaryName: draft.beneficiaryName || prev.beneficiaryName,
       beneficiaryPhone: draft.beneficiaryPhone || prev.beneficiaryPhone,
       knowsProblem:
-        typeof draft.knowsProblem === 'boolean' ? draft.knowsProblem : prev.knowsProblem,
+        draft.knowsProblem !== undefined
+          ? draft.knowsProblem === true || draft.knowsProblem === 'true'
+          : prev.knowsProblem,
       problemType: draft.problemType || prev.problemType,
       issueLevel: draft.issueLevel || prev.issueLevel,
       problemDescription: draft.problemDescription || prev.problemDescription,
@@ -567,7 +570,9 @@ export function ServiceRequestStack({
           ? 'express'
           : prev.urgencyLevel,
       dataSafety:
-        typeof draft.wantsDataSafety === 'boolean' ? draft.wantsDataSafety : prev.dataSafety,
+        draft.wantsDataSafety !== undefined
+          ? draft.wantsDataSafety === true || draft.wantsDataSafety === 'true'
+          : prev.dataSafety,
       selectedDate: draft.selectedDate || prev.selectedDate,
       selectedTimeSlot: draft.selectedTimeSlot || prev.selectedTimeSlot,
       preferredDate: draft.preferredDate || prev.preferredDate,
@@ -592,7 +597,8 @@ export function ServiceRequestStack({
       subProblem: selectedProblem?.subProblem || prev.subProblem,
       relationalBehaviors:
         selectedProblem?.relationalBehaviors || prev.relationalBehaviors,
-    }));
+      issueImages: (draft.issueImages?.map((url: string) => ({ uri: url })) as any) || prev.issueImages,
+    } as unknown as FormData));
     setAddressQuery(draft.address || '');
   }, []);
 
@@ -1297,6 +1303,10 @@ export function ServiceRequestStack({
           }
             // Create FormData object
             Object.entries(formData).forEach(([key, value]) => {
+                if (!formData.knowsProblem && (key === 'mainProblem' || key === 'subProblem' || key === 'relationalBehaviors')) {
+                  return; // Skip category data if they selected "No, I need help"
+                }
+
                 // Append all form fields except images
           if (key !== 'issueImages' && value !== undefined && value !== null) {
             // These specific fields need to be JSON strings

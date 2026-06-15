@@ -20,3 +20,4 @@ export {
   migrateDraftsToUser,
 } from './draftServiceRequests';
 export type { DraftServiceRequest } from './draftServiceRequests';
+export * from './notifications';

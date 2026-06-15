@@ -279,9 +279,12 @@ export function CreateRequestScreen() {
             fontFamily: fonts.medium,
           },
           detailValue: {
+            flex: 1,
+            textAlign: 'right',
+            marginLeft: spacing.md,
             fontSize: 15,
             lineHeight: 20,
-              color: bodyText,
+            color: bodyText,
             fontFamily: fonts.semibold,
           },
           urgentText: {
@@ -441,7 +444,9 @@ export function CreateRequestScreen() {
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Location</Text>
-                  <Text style={styles.detailValue}>{request.city || request.address || 'N/A'}</Text>
+                  <Text style={styles.detailValue} numberOfLines={1} ellipsizeMode="tail">
+                    {request.city || request.address || 'N/A'}
+                  </Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Priority</Text>
