@@ -25,8 +25,10 @@ import { logout as apiLogout } from './src/core/api';
 import type { User } from './src/core/api';
 import { OnboardingScreen } from './src/features/onboarding';
 import { HomeScreen } from './src/features/home';
+import { NotificationsScreen } from './src/features/notifications';
+import TermsAndPoliciesScreen from './src/features/policies/TermsAndPoliciesScreen';
 
-import { AppBar, MobileFooter } from './src/core/components';
+import { AppBar, MobileFooter, FloatingDraftsCounter } from './src/core/components';
 import type { FooterTabId } from './src/core/components/MobileFooter';
 import TabNavigator from './src/navigation/TabNavigator';
 import { AuthProvider, useAuth } from './src/lib/contexts/auth-context';
@@ -134,7 +136,7 @@ function AppContent() {
           onNotificationsPress={() =>
             Alert.alert(
               'Notifications',
-              'Your notifications will appear here soon.'
+              'Please login to view notifications.'
             )
           }
           onLogoutPress={handleLogout}
@@ -207,7 +209,15 @@ function AppNavigator() {
         setCurrentRouteName(getActiveRouteName(state));
       }}
     >
-      { !hasSeenOnboarding ? <AppContent /> : <TabNavigator /> }
+      <Stack.Navigator screenOptions={{ headerShown: false }}>
+        {!hasSeenOnboarding ? (
+          <Stack.Screen name="AppContent" component={AppContent} />
+        ) : (
+          <Stack.Screen name="MainApp" component={TabNavigator} />
+        )}
+        <Stack.Screen name="Notifications" component={NotificationsScreen} />
+        <Stack.Screen name="TermsAndPolicies" component={TermsAndPoliciesScreen} />
+      </Stack.Navigator>
     </NavigationContainer>
   );
 }

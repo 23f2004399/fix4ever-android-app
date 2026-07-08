@@ -1,2 +1,1 @@
-// Notifications: list, read, delete - customer
-export {};
+export * from './NotificationsScreen';

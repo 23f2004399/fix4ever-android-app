@@ -4,13 +4,15 @@ import {
   Text,
   StyleSheet,
   ScrollView,
-  TouchableOpacity,
   KeyboardAvoidingView,
   Platform,
+  Image,
+  TouchableOpacity,
+  TextInput,
+  ActivityIndicator,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useTheme } from '../../core/theme';
-import { Button, Input } from '../../core/components';
 import { useAutoOtp } from '../../core/hooks';
 import { getEmailError, validatePassword } from '../../core/utils';
 import { forgotPassword, resetPassword } from '../../core/api';
@@ -28,7 +30,7 @@ export function ResetPasswordScreen({
   onSuccess,
 }: ResetPasswordScreenProps) {
   const insets = useSafeAreaInsets();
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, isDark } = useTheme();
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -36,6 +38,21 @@ export function ResetPasswordScreen({
   const [otpSent, setOtpSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+
+  const fonts = {
+    regular: 'Montserrat-Regular',
+    medium: 'Montserrat-Medium',
+    semibold: 'Montserrat-SemiBold',
+    bold: 'Montserrat-Bold',
+  } as const;
+
+  const primaryBlue = isDark ? '#1C4E7E' : '#01325D';
+  const screenBg = isDark ? '#242D3B' : '#FFFFFF';
+  const headingColor = isDark ? '#F3F7FF' : '#082C50';
+  const labelColor = isDark ? '#D5E1F1' : '#082C50';
+  const mutedText = isDark ? '#D0D8E5' : '#3A3A3A';
+  const inputBg = isDark ? '#2D394A' : '#FFFFFF';
+  const inputBorder = isDark ? '#5A6A82' : '#B7BEC8';
 
   useAutoOtp({
     enabled: otpSent,
@@ -110,56 +127,144 @@ export function ResetPasswordScreen({
   const styles = StyleSheet.create({
     container: {
       flex: 1,
-      backgroundColor: colors.background,
+      backgroundColor: screenBg,
     },
     scroll: { flex: 1 },
     scrollContent: {
       paddingHorizontal: spacing.lg,
-      paddingTop: insets.top + spacing.lg,
-      paddingBottom: insets.bottom + spacing.xxl,
-    },
-    header: {
-      flexDirection: 'row',
+      paddingTop: insets.top + spacing.sm,
+      paddingBottom: insets.bottom + spacing.lg + (Platform.OS === 'android' ? 300 : 0),
       alignItems: 'center',
-      marginBottom: spacing.xl,
     },
-    backBtn: { padding: spacing.sm, marginLeft: -spacing.sm },
-    backText: { ...typography.label, color: colors.primary },
+    logoCircle: {
+      width: 118,
+      height: 118,
+      borderRadius: 59,
+      alignItems: 'center',
+      justifyContent: 'center',
+      marginBottom: spacing.lg,
+      shadowColor: '#000000',
+      shadowOpacity: 0.24,
+      shadowRadius: 10,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
+    },
+    logoClip: {
+      width: 118,
+      height: 118,
+      borderRadius: 59,
+      overflow: 'hidden',
+      backgroundColor: primaryBlue,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    logoImage: {
+      width: 150,
+      height: 150,
+    },
     title: {
-      ...typography.title,
-      color: colors.foreground,
+      fontSize: 42,
+      lineHeight: 52,
+      letterSpacing: -1.2,
+      fontFamily: fonts.bold,
+      color: headingColor,
       marginBottom: spacing.sm,
+      textAlign: 'center',
     },
     subtitle: {
-      ...typography.bodySmall,
-      color: colors.mutedForeground,
+      fontSize: 16,
+      lineHeight: 20,
+      letterSpacing: -0.08,
+      color: mutedText,
+      fontFamily: fonts.medium,
       marginBottom: spacing.xl,
+      textAlign: 'center',
+      maxWidth: 320,
     },
-    form: { marginBottom: spacing.lg },
+    form: {
+      marginBottom: spacing.md,
+      alignSelf: 'stretch',
+      width: '100%',
+      maxWidth: 360,
+    },
+    inputContainer: {
+      marginBottom: spacing.md,
+    },
+    inputLabel: {
+      fontSize: 15,
+      lineHeight: 20,
+      color: labelColor,
+      fontFamily: fonts.medium,
+      marginBottom: 6,
+    },
+    textInput: {
+      borderRadius: 10,
+      borderWidth: 1,
+      borderColor: inputBorder,
+      backgroundColor: inputBg,
+      paddingVertical: 14,
+      paddingHorizontal: 16,
+      color: isDark ? '#FFFFFF' : '#1E1E1E',
+      fontFamily: fonts.medium,
+      fontSize: 16,
+    },
     hint: {
-      ...typography.caption,
-      color: colors.mutedForeground,
+      fontSize: 12,
+      color: mutedText,
+      fontFamily: fonts.regular,
       marginTop: -spacing.sm,
       marginBottom: spacing.md,
     },
     otpSentNote: {
-      ...typography.caption,
-      color: colors.primary,
+      color: isDark ? '#9BC7FF' : primaryBlue,
       marginBottom: spacing.md,
+      fontFamily: fonts.medium,
+      fontSize: 14,
+      lineHeight: 18,
     },
     errorText: {
       color: colors.destructive,
       marginBottom: spacing.md,
       fontSize: 14,
+      fontFamily: fonts.medium,
     },
-    actions: { gap: spacing.md },
-    forgotLink: {
-      marginTop: spacing.sm,
-      alignSelf: 'center',
+    actions: {
+      gap: spacing.md,
+      alignSelf: 'stretch',
+      width: '100%',
+      maxWidth: 360,
     },
-    forgotLinkText: {
-      ...typography.caption,
-      color: colors.primary,
+    primaryBtn: {
+      borderRadius: 10,
+      minHeight: 56,
+      backgroundColor: primaryBlue,
+      alignItems: 'center',
+      justifyContent: 'center',
+      shadowColor: '#000000',
+      shadowOpacity: 0.14,
+      shadowRadius: 8,
+      shadowOffset: { width: 0, height: 4 },
+      elevation: 3,
+    },
+    primaryBtnText: {
+      color: '#FFFFFF',
+      fontFamily: fonts.semibold,
+      fontSize: 16,
+      lineHeight: 20,
+    },
+    ghostBtn: {
+      borderRadius: 10,
+      minHeight: 48,
+      borderWidth: 1,
+      borderColor: primaryBlue,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    ghostBtnText: {
+      color: primaryBlue,
+      fontFamily: fonts.semibold,
+      fontSize: 16,
+      lineHeight: 20,
     },
   });
 
@@ -175,92 +280,124 @@ export function ResetPasswordScreen({
         keyboardShouldPersistTaps="handled"
         showsVerticalScrollIndicator={false}
       >
-        <View style={styles.header}>
-          <TouchableOpacity
-            style={styles.backBtn}
-            onPress={onBack}
-            activeOpacity={0.7}
-          >
-            <Text style={styles.backText}>← Back</Text>
-          </TouchableOpacity>
+        <View style={styles.logoCircle}>
+          <View style={styles.logoClip}>
+            <Image
+              source={require('../../assets/icons/blue_icon.png')}
+              style={styles.logoImage}
+              resizeMode="contain"
+            />
+          </View>
         </View>
-        <Text style={styles.title}>Reset password</Text>
+
+        <Text style={styles.title}>Reset</Text>
         <Text style={styles.subtitle}>
           Enter your email. We'll send a verification code, then you can set a
           new password.
         </Text>
 
         <View style={styles.form}>
-          <Input
-            label="Email"
-            value={email}
-            onChangeText={setEmail}
-            placeholder="you@example.com"
-            autoCapitalize="none"
-            keyboardType="email-address"
-            autoComplete="email"
-            editable={!otpSent}
-          />
+          <View style={styles.inputContainer}>
+            <Text style={styles.inputLabel}>Email</Text>
+            <TextInput
+              style={styles.textInput}
+              value={email}
+              onChangeText={setEmail}
+              placeholder="you@example.com"
+              placeholderTextColor={isDark ? '#A5B4C8' : '#8A8A8A'}
+              autoCapitalize="none"
+              keyboardType="email-address"
+              autoComplete="email"
+              editable={!otpSent}
+            />
+          </View>
+
           {otpSent && (
             <>
               <Text style={styles.otpSentNote}>
-                Check your email for the 6-digit code. If sent via SMS, it may
-                auto-fill.
+                Check your email for the 6-digit code.
               </Text>
-              <Input
-                label="OTP"
-                value={otp}
-                onChangeText={setOtp}
-                placeholder="000000"
-                keyboardType="number-pad"
-                maxLength={6}
-                textContentType="oneTimeCode"
-                autoComplete="one-time-code"
-              />
-              <Input
-                label="New password"
-                value={newPassword}
-                onChangeText={setNewPassword}
-                placeholder="••••••••"
-                secureTextEntry
-                autoComplete="password-new"
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>OTP</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={otp}
+                  onChangeText={setOtp}
+                  placeholder="000000"
+                  placeholderTextColor={isDark ? '#A5B4C8' : '#8A8A8A'}
+                  keyboardType="number-pad"
+                  maxLength={6}
+                  textContentType="oneTimeCode"
+                  autoComplete="one-time-code"
+                />
+              </View>
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>New password</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={newPassword}
+                  onChangeText={setNewPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={isDark ? '#A5B4C8' : '#8A8A8A'}
+                  secureTextEntry
+                  autoComplete="password-new"
+                />
+              </View>
               <Text style={styles.hint}>{PASSWORD_HINT}</Text>
-              <Input
-                label="Confirm new password"
-                value={confirmPassword}
-                onChangeText={setConfirmPassword}
-                placeholder="••••••••"
-                secureTextEntry
-                autoComplete="password-new"
-              />
+              <View style={styles.inputContainer}>
+                <Text style={styles.inputLabel}>Confirm new password</Text>
+                <TextInput
+                  style={styles.textInput}
+                  value={confirmPassword}
+                  onChangeText={setConfirmPassword}
+                  placeholder="••••••••"
+                  placeholderTextColor={isDark ? '#A5B4C8' : '#8A8A8A'}
+                  secureTextEntry
+                  autoComplete="password-new"
+                />
+              </View>
             </>
           )}
+
           {error ? <Text style={styles.errorText}>{error}</Text> : null}
         </View>
 
         <View style={styles.actions}>
           {!otpSent ? (
-            <Button
-              title="Send OTP to email"
+            <TouchableOpacity
+              style={styles.primaryBtn}
               onPress={handleSendOtp}
-              loading={loading}
-              variant="primary"
-            />
+              activeOpacity={0.85}
+              disabled={loading}
+            >
+              {loading ? (
+                <ActivityIndicator color="#FFFFFF" />
+              ) : (
+                <Text style={styles.primaryBtnText}>Send OTP to email</Text>
+              )}
+            </TouchableOpacity>
           ) : (
             <>
-              <Button
-                title="Reset password"
+              <TouchableOpacity
+                style={styles.primaryBtn}
                 onPress={handleResetPassword}
-                loading={loading}
-                variant="primary"
-              />
-              <Button
-                title="Send OTP again"
+                activeOpacity={0.85}
+                disabled={loading}
+              >
+                {loading ? (
+                  <ActivityIndicator color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.primaryBtnText}>Reset password</Text>
+                )}
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.ghostBtn}
                 onPress={handleSendOtp}
-                loading={loading}
-                variant="ghost"
-              />
+                activeOpacity={0.7}
+                disabled={loading}
+              >
+                <Text style={styles.ghostBtnText}>Send OTP again</Text>
+              </TouchableOpacity>
             </>
           )}
         </View>

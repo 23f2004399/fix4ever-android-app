@@ -2,6 +2,11 @@ import React, { useState, useEffect } from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, Modal, Alert } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../core/theme';
+import { useNavigation } from '@react-navigation/native';
+import { requestWithAuth, saveDraftServiceRequest } from '../../core/api';
+import { getStoredToken } from '../../core/storage';
+import { ThemedAlertDialog } from '../../core/components/ThemedAlertDialog';
+import { Button } from './Button';
 
 interface ServiceRequestTimerProps {
   serviceRequest: {
@@ -38,15 +43,16 @@ interface ServiceRequestTimerProps {
 }
 
 const RETRY_REASONS = [
-  { id: 'no_response', label: 'No technicians responded', icon: '⏰' },
-  { id: 'wrong_location', label: 'Wrong location entered', icon: '📍' },
-  { id: 'wrong_device', label: 'Wrong device details', icon: '💻' },
-  { id: 'urgent_need', label: 'Need urgent service', icon: '🚨' },
-  { id: 'price_issue', label: 'Price too high', icon: '💰' },
-  { id: 'other', label: 'Other reason', icon: '❓' },
+  { id: 'no_response', label: 'No technicians responded', icon: 'clock' },
+  { id: 'wrong_location', label: 'Wrong location entered', icon: 'map-pin' },
+  { id: 'wrong_device', label: 'Wrong device details', icon: 'monitor' },
+  { id: 'urgent_need', label: 'Need urgent service', icon: 'alert-circle' },
+  { id: 'price_issue', label: 'Price too high', icon: 'dollar-sign' },
+  { id: 'other', label: 'Other reason', icon: 'help-circle' },
 ];
 
 export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps) {
+  const navigation = useNavigation<any>();
   const { colors, typography, isDark } = useTheme();
   const fonts = {
     medium: 'Montserrat-Medium',
@@ -73,6 +79,7 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
   const [isRetrying, setIsRetrying] = useState(false);
   const [isModifying, setIsModifying] = useState(false);
   const [showRetryModal, setShowRetryModal] = useState(false);
+  const [showModifyAlert, setShowModifyAlert] = useState(false);
   const [selectedReason, setSelectedReason] = useState('');
 
   // Calculate time left
@@ -106,6 +113,88 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
     return () => clearInterval(interval);
   }, [serviceRequest.timerExpiresAt, serviceRequest.isTimerActive]);
 
+  const cloneAndNavigate = async (actionName: string) => {
+    try {
+      const token = await getStoredToken();
+      if (!token) throw new Error('No authentication token found');
+
+      // 1. Build and save the Draft FIRST to ensure data is safely backed up
+      const draftPayload = {
+        createNew: true,
+        brand: serviceRequest.brand,
+        model: serviceRequest.model,
+        problemType: serviceRequest.problemType,
+        problemDescription: serviceRequest.problemDescription,
+        address: serviceRequest.address,
+        city: serviceRequest.city,
+        userName: serviceRequest.userName,
+        userPhone: serviceRequest.userPhone,
+        requestType: serviceRequest.requestType,
+        serviceType: serviceRequest.serviceType,
+        beneficiaryName: serviceRequest.beneficiaryName,
+        beneficiaryPhone: serviceRequest.beneficiaryPhone,
+        preferredDate: serviceRequest.preferredDate,
+        preferredTime: serviceRequest.preferredTime,
+        budget: serviceRequest.budget,
+        priority: serviceRequest.priority,
+        isUrgent: serviceRequest.isUrgent,
+        issueLevel: serviceRequest.issueLevel,
+        urgency: serviceRequest.urgency,
+        wantsWarranty: serviceRequest.wantsWarranty,
+        wantsDataSafety: serviceRequest.wantsDataSafety,
+        calculatedPricing: serviceRequest.calculatedPricing,
+        knowsProblem: (serviceRequest as any).knowsProblem !== undefined 
+          ? (serviceRequest as any).knowsProblem 
+          : !!((serviceRequest as any).mainProblem?.title || (serviceRequest as any).mainProblem?.id),
+        selectedProblem: {
+          mainProblem: (serviceRequest as any).mainProblem,
+          subProblem: (serviceRequest as any).subProblem,
+          relationalBehaviors: (serviceRequest as any).relationalBehaviors,
+        },
+        issueImages: (serviceRequest as any).issueImages,
+        location: serviceRequest.location || {
+          lat: serviceRequest.latitude,
+          lng: serviceRequest.longitude,
+          latitude: serviceRequest.latitude,
+          longitude: serviceRequest.longitude,
+        },
+      };
+
+      const draftRes = await saveDraftServiceRequest(draftPayload);
+      
+      if (draftRes.error) {
+        throw new Error(`Failed to create a draft for ${actionName}`);
+      }
+
+      const savedDraft = draftRes.data?.draft || draftRes.data?.data?.draft;
+      const newDraftId = 
+        savedDraft?._id || savedDraft?.id || savedDraft?.draftId ||
+        draftRes.data?.data?._id || draftRes.data?.data?.id || draftRes.data?.data?.draftId ||
+        draftRes.data?.draftId || draftRes.data?.id || draftRes.data?._id;
+
+      if (!newDraftId) {
+        throw new Error(`Could not retrieve new draft ID for ${actionName}. Server response: ` + JSON.stringify(draftRes.data));
+      }
+
+      // 2. Draft is safely saved! Now attempt to hard delete the old request
+      const cancelRes = await requestWithAuth(
+        `/service-requests/${serviceRequest._id}/cancel?action=supersede`,
+        token,
+        { method: 'PATCH' }
+      );
+      if (cancelRes.error && cancelRes.error.message && !cancelRes.error.message.includes('Only pending')) {
+        console.warn('Cancel warning:', cancelRes.error.message);
+      }
+
+      // 3. Navigate to Stack with the new draftId
+      navigation.navigate('ServiceRequestStack', { draftId: newDraftId });
+
+    } catch (error: any) {
+      console.error(`Error ${actionName} service request:`, error);
+      Alert.alert('Error', error.message || `Failed to open ${actionName} form`);
+    }
+  };
+
   const handleRetry = async () => {
     if (!selectedReason) {
       Alert.alert('Error', 'Please select a reason for retrying');
@@ -113,37 +202,20 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
     }
 
     setIsRetrying(true);
-    try {
-      // TODO: Navigate to service request form with pre-filled data for retry
-      // This would typically use React Navigation
-      console.log('Retrying service request with reason:', selectedReason);
-      
-      setShowRetryModal(false);
-      setSelectedReason('');
-      
-      Alert.alert('Success', 'Opening service request form for retry...');
-    } catch (error) {
-      console.error('Error retrying service request:', error);
-      Alert.alert('Error', 'Failed to open retry form');
-    } finally {
-      setIsRetrying(false);
-    }
+    setShowRetryModal(false);
+    await cloneAndNavigate('retry');
+    setSelectedReason('');
+    setIsRetrying(false);
   };
 
   const handleModify = () => {
+    setShowModifyAlert(true);
+  };
+
+  const handleConfirmModify = async () => {
     setIsModifying(true);
-    try {
-      // TODO: Navigate to service request form with pre-filled data for modify mode
-      // This would typically use React Navigation
-      console.log('Modifying service request:', serviceRequest._id);
-      
-      Alert.alert('Success', 'Opening modification form...');
-    } catch (error) {
-      console.error('Error modifying service request:', error);
-      Alert.alert('Error', 'Failed to open modification form');
-    } finally {
-      setIsModifying(false);
-    }
+    await cloneAndNavigate('modification');
+    setIsModifying(false);
   };
 
   const getTimerColor = () => {
@@ -165,8 +237,8 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
     return { text: 'Waiting', color: primaryBlue };
   };
 
-  // Don't render if serviceRequest is not available or not pending
-  if (!serviceRequest || serviceRequest.status !== 'Pending' || !serviceRequest.isTimerActive) {
+  // Don't render if serviceRequest is not available or it's actively being worked on (in progress/completed)
+  if (!serviceRequest || !['Pending', 'Expired', 'Cancelled'].includes(serviceRequest.status)) {
     return null;
   }
 
@@ -332,20 +404,28 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
     },
     modalActions: {
       flexDirection: 'row',
-      gap: 8,
-      marginTop: 16,
+      gap: 12,
+      marginTop: 20,
     },
     modalButton: {
       flex: 1,
-      paddingVertical: 10,
-      borderRadius: 6,
+      paddingVertical: 12,
+      borderRadius: 10,
       alignItems: 'center',
+      justifyContent: 'center',
     },
     modalButtonCancel: {
-      backgroundColor: colors.muted,
+      backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : colors.card,
+      borderWidth: 1,
+      borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border,
     },
     modalButtonConfirm: {
       backgroundColor: primaryBlue,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.1,
+      shadowRadius: 4,
+      elevation: 2,
     },
     modalButtonText: {
       ...typography.bodySmall,
@@ -366,7 +446,13 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
       <View style={styles.timerHeader}>
         <View style={styles.timerHeaderText}>
           <View style={styles.timerIcon} />
-          <Text style={styles.timerLabel}>Waiting for Technicians</Text>
+          <Text style={styles.timerLabel}>
+            {serviceRequest.status === 'Cancelled' 
+              ? 'Request Cancelled' 
+              : isExpired || serviceRequest.status === 'Expired' 
+                ? 'Timer Expired' 
+                : 'Waiting for Technicians'}
+          </Text>
         </View>
         <View style={styles.statusBadge}>
           <Text style={styles.statusBadgeText}>{statusBadge?.text}</Text>
@@ -375,11 +461,15 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
 
       {/* Timer Countdown */}
       <View style={styles.countdownContainer}>
-        {isExpired ? (
+        {isExpired || ['Expired', 'Cancelled'].includes(serviceRequest.status) ? (
           <View style={styles.expiredContainer}>
-            <Text style={styles.expiredText}>Timer Expired</Text>
+            <Text style={styles.expiredText}>
+              {serviceRequest.status === 'Cancelled' ? 'Request Cancelled' : 'Timer Expired'}
+            </Text>
             <Text style={styles.expiredSubtext}>
-              No technicians accepted your request in time
+              {serviceRequest.status === 'Cancelled' 
+                ? 'This request was cancelled by the system or a technician' 
+                : 'No technicians accepted your request in time'}
             </Text>
           </View>
         ) : (
@@ -398,51 +488,53 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
 
       {/* Action Buttons */}
       <View style={styles.actionButtons}>
-        <TouchableOpacity
-          onPress={() => setShowRetryModal(true)}
-          disabled={isRetrying || isModifying}
-          style={[
-            styles.actionButton,
-            (isRetrying || isModifying) && styles.actionButtonDisabled,
-          ]}
-        >
-          {isRetrying ? (
-            <Text style={styles.actionButtonText}>Retrying...</Text>
-          ) : (
-            <>
-              <Icon
-                name="rotate-ccw"
-                size={14}
-                color={outlineText}
-                style={styles.actionButtonIcon}
-              />
-              <Text style={styles.actionButtonText}>Retry</Text>
-            </>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleModify}
-          disabled={isRetrying || isModifying}
-          style={[
-            styles.actionButton,
-            (isRetrying || isModifying) && styles.actionButtonDisabled,
-          ]}
-        >
-          {isModifying ? (
-            <Text style={styles.actionButtonText}>Modifying...</Text>
-          ) : (
-            <>
-              <Icon
-                name="edit-2"
-                size={14}
-                color={outlineText}
-                style={styles.actionButtonIcon}
-              />
-              <Text style={styles.actionButtonText}>Modify</Text>
-            </>
-          )}
-        </TouchableOpacity>
+        {isExpired || ['Expired', 'Cancelled'].includes(serviceRequest.status) ? (
+          <TouchableOpacity
+            onPress={() => setShowRetryModal(true)}
+            disabled={isRetrying || isModifying}
+            style={[
+              styles.actionButton,
+              (isRetrying || isModifying) && styles.actionButtonDisabled,
+            ]}
+          >
+            {isRetrying ? (
+              <Text style={styles.actionButtonText}>Retrying...</Text>
+            ) : (
+              <>
+                <Icon
+                  name="rotate-ccw"
+                  size={14}
+                  color={outlineText}
+                  style={styles.actionButtonIcon}
+                />
+                <Text style={styles.actionButtonText}>Retry</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        ) : (
+          <TouchableOpacity
+            onPress={handleModify}
+            disabled={isRetrying || isModifying}
+            style={[
+              styles.actionButton,
+              (isRetrying || isModifying) && styles.actionButtonDisabled,
+            ]}
+          >
+            {isModifying ? (
+              <Text style={styles.actionButtonText}>Modifying...</Text>
+            ) : (
+              <>
+                <Icon
+                  name="edit-2"
+                  size={14}
+                  color={outlineText}
+                  style={styles.actionButtonIcon}
+                />
+                <Text style={styles.actionButtonText}>Modify</Text>
+              </>
+            )}
+          </TouchableOpacity>
+        )}
       </View>
 
       {/* Retry Reason Modal */}
@@ -468,36 +560,56 @@ export function ServiceRequestTimer({ serviceRequest }: ServiceRequestTimerProps
                   selectedReason === reason.id && styles.reasonButtonSelected,
                 ]}
               >
-                <Text style={styles.reasonIcon}>{reason.icon}</Text>
+                <Icon 
+                  name={(reason as any).icon} 
+                  size={18} 
+                  color={selectedReason === reason.id ? primaryBlue : colors.mutedForeground} 
+                  style={{ marginRight: 12 }} 
+                />
                 <Text style={styles.reasonText}>{reason.label}</Text>
               </TouchableOpacity>
             ))}
 
             <View style={styles.modalActions}>
-              <TouchableOpacity
+              <Button
+                title="Cancel"
+                variant="outline"
                 onPress={() => {
                   setShowRetryModal(false);
                   setSelectedReason('');
                 }}
-                style={styles.modalButtonCancel}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextCancel]}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
+                style={{ flex: 1, backgroundColor: isDark ? 'rgba(255,255,255,0.05)' : colors.card, borderColor: isDark ? 'rgba(255,255,255,0.1)' : colors.border }}
+                textStyle={{ color: colors.foreground }}
+              />
+              <Button
+                title={isRetrying ? 'Retrying...' : 'Retry'}
+                variant="primary"
                 onPress={handleRetry}
                 disabled={!selectedReason || isRetrying}
-                style={[styles.modalButtonConfirm, (!selectedReason || isRetrying) && styles.actionButtonDisabled]}
-              >
-                <Text style={[styles.modalButtonText, styles.modalButtonTextConfirm]}>
-                  {isRetrying ? 'Retrying...' : 'Retry'}
-                </Text>
-              </TouchableOpacity>
+                loading={isRetrying}
+                style={{ flex: 1, backgroundColor: primaryBlue }}
+              />
             </View>
           </View>
         </View>
       </Modal>
+
+      {/* Modify Confirmation Alert */}
+      <ThemedAlertDialog
+        visible={showModifyAlert}
+        title="Modify Request"
+        message="Are you sure you want to modify this request? The current request will be cancelled and you will need to submit a new one."
+        variant="warning"
+        onDismiss={() => setShowModifyAlert(false)}
+        buttons={[
+          { text: 'No, Keep It', variant: 'secondary' },
+          {
+            text: 'Yes, Modify',
+            variant: 'primary',
+            onPress: handleConfirmModify,
+          },
+        ]}
+      />
     </View>
   );
 }

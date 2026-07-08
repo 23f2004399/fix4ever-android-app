@@ -9,6 +9,8 @@ import {
   ActivityIndicator,
   RefreshControl,
   Image,
+  DeviceEventEmitter,
+  Modal,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useFocusEffect, useNavigation } from '@react-navigation/native';
@@ -76,6 +78,9 @@ export function DraftsScreen() {
   const { spacing, typography, isDark } = useTheme();
   const [drafts, setDrafts] = useState<DraftCard[]>([]);
   const [loading, setLoading] = useState(false);
+  const [deleteModalVisible, setDeleteModalVisible] = useState(false);
+  const [draftToDelete, setDraftToDelete] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
 
   const brandBlue = '#01325D';
   const primaryBlue = isDark ? '#1C4E7E' : brandBlue;
@@ -368,6 +373,62 @@ export function DraftsScreen() {
           textAlign: 'center',
           fontFamily: fonts.medium,
         },
+        modalOverlay: {
+          flex: 1,
+          backgroundColor: 'rgba(0, 0, 0, 0.5)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: spacing.lg,
+        },
+        modalContent: {
+          backgroundColor: cardBg,
+          borderRadius: 16,
+          padding: spacing.xl,
+          width: '100%',
+          maxWidth: 340,
+        },
+        modalTitle: {
+          ...typography.title,
+          fontSize: 20,
+          color: headingColor,
+          marginBottom: spacing.sm,
+          fontFamily: fonts.bold,
+          textAlign: 'center',
+        },
+        modalSubtitle: {
+          ...typography.body,
+          color: subtitleColor,
+          textAlign: 'center',
+          marginBottom: spacing.xl,
+          fontFamily: fonts.medium,
+        },
+        modalActions: {
+          flexDirection: 'row',
+          gap: spacing.md,
+        },
+        modalButton: {
+          flex: 1,
+          paddingVertical: 14,
+          borderRadius: 12,
+          alignItems: 'center',
+          justifyContent: 'center',
+        },
+        modalButtonCancel: {
+          backgroundColor: isDark ? '#3F5169' : '#F1F5F9',
+        },
+        modalButtonDelete: {
+          backgroundColor: '#EF4444',
+        },
+        modalButtonTextCancel: {
+          ...typography.body,
+          color: isDark ? '#F8FAFC' : '#0F172A',
+          fontFamily: fonts.semibold,
+        },
+        modalButtonTextDelete: {
+          ...typography.body,
+          color: '#FFFFFF',
+          fontFamily: fonts.semibold,
+        },
       }),
     [
       spacing,
@@ -396,24 +457,29 @@ export function DraftsScreen() {
   };
 
   const handleDeleteDraft = (draftId: string) => {
-    Alert.alert('Delete Draft', 'Are you sure you want to delete this draft?', [
-      {
-        text: 'Cancel',
-        style: 'cancel',
-      },
-      {
-        text: 'Delete',
-        style: 'destructive',
-        onPress: async () => {
-          const response = await deleteDraftServiceRequest(draftId);
-          if (response.data?.success) {
-            setDrafts((prev) => prev.filter((draft) => draft.id !== draftId));
-            return;
-          }
-          Alert.alert('Error', response.error?.message || 'Failed to delete draft');
-        },
-      },
-    ]);
+    setDraftToDelete(draftId);
+    setDeleteModalVisible(true);
+  };
+
+  const confirmDeleteDraft = async () => {
+    if (!draftToDelete) return;
+    
+    setIsDeleting(true);
+    try {
+      const response = await deleteDraftServiceRequest(draftToDelete);
+      if (response.data?.success) {
+        setDrafts((prev) => prev.filter((draft) => draft.id !== draftToDelete));
+        DeviceEventEmitter.emit('refresh_drafts');
+      } else {
+        Alert.alert('Error', response.error?.message || 'Failed to delete draft');
+      }
+    } catch (e) {
+      Alert.alert('Error', 'An unexpected error occurred while deleting the draft.');
+    } finally {
+      setIsDeleting(false);
+      setDeleteModalVisible(false);
+      setDraftToDelete(null);
+    }
   };
 
   const subtitle = useMemo(() => {
@@ -553,6 +619,51 @@ export function DraftsScreen() {
           ))
         )}
       </ScrollView>
+
+      {/* Custom Delete Modal */}
+      <Modal
+        visible={deleteModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => {
+          if (!isDeleting) {
+            setDeleteModalVisible(false);
+            setDraftToDelete(null);
+          }
+        }}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <Text style={styles.modalTitle}>Delete Draft</Text>
+            <Text style={styles.modalSubtitle}>
+              Are you sure you want to delete this draft? This action cannot be undone.
+            </Text>
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonCancel]}
+                onPress={() => {
+                  setDeleteModalVisible(false);
+                  setDraftToDelete(null);
+                }}
+                disabled={isDeleting}
+              >
+                <Text style={styles.modalButtonTextCancel}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={[styles.modalButton, styles.modalButtonDelete]}
+                onPress={confirmDeleteDraft}
+                disabled={isDeleting}
+              >
+                {isDeleting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={styles.modalButtonTextDelete}>Delete</Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }

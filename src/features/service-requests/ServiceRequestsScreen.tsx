@@ -461,9 +461,7 @@ export function ServiceRequestsScreen() {
                     <Text style={styles.detailValue}>{request.category}</Text>
                   </View>
                 )}
-                {request.status === 'Pending' &&
-                  request.isTimerActive &&
-                  request.timerExpiresAt && (
+                {['Pending', 'Expired', 'Cancelled'].includes(request.status) && (
                     <ServiceRequestTimer serviceRequest={request} />
                   )}
               </View>

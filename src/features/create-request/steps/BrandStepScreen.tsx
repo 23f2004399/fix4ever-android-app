@@ -40,7 +40,7 @@ export function BrandStepScreen({
   customBrand,
   setCustomBrand,
 }: BrandStepScreenProps) {
-  const { colors, spacing, typography } = useTheme();
+  const { colors, spacing, typography, isDark } = useTheme();
 
   // Filter brands based on search query
   const filteredBrands = brands.filter(brand =>
@@ -103,7 +103,12 @@ export function BrandStepScreen({
     } as ViewStyle,
     brandItemSelected: {
       borderColor: colors.primary,
-      backgroundColor: colors.primary + '12',
+      borderWidth: 2,
+      shadowColor: colors.primary,
+      shadowOpacity: 0.15,
+      shadowRadius: 12,
+      shadowOffset: { width: 0, height: 6 },
+      elevation: 6,
     } as ViewStyle,
     brandItemError: {
       borderColor: colors.destructive,
@@ -117,7 +122,7 @@ export function BrandStepScreen({
       marginTop: spacing.xs,
     } as TextStyle,
     brandNameSelected: {
-      color: colors.primary,
+      color: isDark ? '#FFFFFF' : colors.primary,
     } as TextStyle,
     otherBrandIcon: {
       width: 50,
@@ -219,6 +224,20 @@ export function BrandStepScreen({
                 }
               }}
             >
+              {/* Overlay tint to ensure uniform shading over both background and image */}
+              {(formData.selectedBrand === brand.name || formData.selectedBrand === brand.id) && (
+                <View 
+                  style={[
+                    StyleSheet.absoluteFillObject, 
+                    { 
+                      backgroundColor: isDark ? 'rgba(255, 255, 255, 0.1)' : colors.primary + '18', 
+                      borderRadius: 16 
+                    }
+                  ]} 
+                  pointerEvents="none" 
+                />
+              )}
+              
               {brand.img_url ? (
                 <Image
                   source={{ uri: brand.img_url }}

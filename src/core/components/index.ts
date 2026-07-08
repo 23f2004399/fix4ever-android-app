@@ -6,3 +6,4 @@ export { MobileFooter } from './MobileFooter';
 export { ServiceRequestTimer } from './ServiceRequestTimer';
 export { default as RealTimeServiceTracker } from './RealTimeServiceTracker';
 export { ThemeSelector } from './ThemeSelector';
+export { FloatingDraftsCounter } from './FloatingDraftsCounter';

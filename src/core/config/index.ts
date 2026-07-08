@@ -11,7 +11,7 @@
 import { Platform } from 'react-native';
 
 const DEFAULT_DEV_PORT = '8080';
-const DEFAULT_PROD_BASE = 'https://api.fix4ever.com';
+const DEFAULT_PROD_BASE = 'https://fix4ever-android-backend-production.up.railway.app';
 
 /**
  * Set to true to force-enable dev-only UI (simulate buttons, etc.).
@@ -24,7 +24,7 @@ const DEV_API_HOST_OVERRIDE: string | null = null;
 
 function getDevHost(): string {
   if (DEV_API_HOST_OVERRIDE) return DEV_API_HOST_OVERRIDE;
-  return Platform.OS === 'android' ? '192.168.157.192': 'localhost';
+  return Platform.OS === 'android' ? '10.42.241.118': 'localhost';
 }
 
 function getAPIBaseURL(): string {
@@ -48,6 +48,13 @@ export const config = {
     if (DEV_MODE_OVERRIDE !== null) return DEV_MODE_OVERRIDE;
     return typeof __DEV__ !== 'undefined' && __DEV__;
   },
+  /**
+   * Web OAuth 2.0 client ID from Google Cloud Console.
+   * Required for @react-native-google-signin/google-signin to return an idToken.
+   * Set this to the "Web client" ID (not the Android client ID) from your
+   * Google Cloud Console → APIs & Services → Credentials.
+   */
+  GOOGLE_WEB_CLIENT_ID: '705003286576-3866q4tcnu2m0t3c0ktb1161v3as5hoh.apps.googleusercontent.com',
 } as const;
 
 
