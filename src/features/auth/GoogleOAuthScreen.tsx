@@ -64,7 +64,10 @@ export function GoogleOAuthScreen({ onBack, onSuccess }: GoogleOAuthScreenProps)
   // Configure + auto-trigger after navigation animation settles (prevents 'Current activity is null').
   // 600ms gives the stack navigator transition time to fully complete.
   useEffect(() => {
-    GoogleSignin.configure({ webClientId: config.GOOGLE_WEB_CLIENT_ID });
+    GoogleSignin.configure({
+      webClientId: config.GOOGLE_WEB_CLIENT_ID,
+      ...(Platform.OS === 'ios' ? { iosClientId: config.GOOGLE_IOS_CLIENT_ID } : {}),
+    });
     const timer = setTimeout(startGoogleSignIn, 900);
     return () => clearTimeout(timer);
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
