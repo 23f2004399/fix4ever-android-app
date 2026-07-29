@@ -668,7 +668,7 @@ export function ServiceRequestStack({
             return;
           }
 
-          const placesKey = Config.GOOGLE_MAPS_API_KEY;
+          const placesKey = Config.GOOGLE_MAPS_API_KEY || config.GOOGLE_MAPS_API_KEY;
           if (!placesKey) {
             setAddressPredictions([]);
             return;

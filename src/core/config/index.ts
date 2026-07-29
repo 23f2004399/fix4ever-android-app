@@ -55,6 +55,16 @@ export const config = {
    * Google Cloud Console → APIs & Services → Credentials.
    */
   GOOGLE_WEB_CLIENT_ID: '705003286576-3866q4tcnu2m0t3c0ktb1161v3as5hoh.apps.googleusercontent.com',
+  /**
+   * iOS OAuth 2.0 client ID from Google Cloud Console.
+   * Required for @react-native-google-signin/google-signin on iOS.
+   * TODO: Replace with the actual iOS client ID from Google Cloud Console → APIs & Services → Credentials.
+   */
+  GOOGLE_IOS_CLIENT_ID: '705003286576-tn95tldil8tkmv2sv22bkbj3i68utkec.apps.googleusercontent.com', // Placeholder matches web client prefix
+  /**
+   * Google Maps API Key for Geocoding and Places Autocomplete.
+   */
+  GOOGLE_MAPS_API_KEY: 'AIzaSyCDelFG2d0TpJnMk2fdsdJhoOAd-q8S9LM',
 } as const;
 
 

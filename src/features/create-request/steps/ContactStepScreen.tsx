@@ -9,7 +9,8 @@ import {
   StyleSheet,
   ViewStyle,
   TextStyle,
-  ScrollView
+  ScrollView,
+  Platform
 } from 'react-native';
 import MapView, { Marker, Region, Callout } from 'react-native-maps';
 import Config from 'react-native-config';
@@ -123,7 +124,7 @@ export function ContactStepScreen({
   };
 
   const reverseGeocodeLatLng = async (latitude: number, longitude: number) => {
-    const geocodingKey = Config.GOOGLE_MAPS_API_KEY;
+    const geocodingKey = Config.GOOGLE_MAPS_API_KEY || config.GOOGLE_MAPS_API_KEY;
 
     if (!geocodingKey) {
       return;
@@ -167,7 +168,7 @@ export function ContactStepScreen({
   };
 
   const resolveAddressToRegion = async (inputAddress: string, placeId?: string) => {
-    const geocodingKey = Config.GOOGLE_MAPS_API_KEY;
+    const geocodingKey = Config.GOOGLE_MAPS_API_KEY || config.GOOGLE_MAPS_API_KEY;
 
     if (!geocodingKey || !inputAddress.trim()) {
       return;
@@ -285,7 +286,7 @@ export function ContactStepScreen({
   }, [selectedCoordinate, hasLatLong]);
 
   useEffect(() => {
-    if (formData.serviceType !== 'visit-shop' || !hasLatLong) {
+    if ((formData.serviceType !== 'visit-shop' && formData.serviceType !== 'onsite') || !hasLatLong) {
       setNearbyVendors([]);
       return;
     }
@@ -629,7 +630,7 @@ export function ContactStepScreen({
       <View style={styles.miniMapContainer}>
         <MapView
           style={styles.miniMap}
-          provider="google"
+          provider={Platform.OS === 'android' ? 'google' : undefined}
           initialRegion={mapRegion}
           region={mapRegion}
           onPress={handleMapPress}
@@ -649,7 +650,7 @@ export function ContactStepScreen({
               onDragEnd={handleMarkerDragEnd}
             />
           )}
-          {formData.serviceType === 'visit-shop' && nearbyVendors.map(vendor => (
+          {(formData.serviceType === 'visit-shop' || formData.serviceType === 'onsite') && nearbyVendors.map(vendor => (
             <Marker
               key={String(vendor._id)}
               coordinate={{ latitude: vendor.latitude, longitude: vendor.longitude }}
@@ -684,7 +685,7 @@ export function ContactStepScreen({
       <Text style={styles.mapHelp}>
         Tip: Search, tap the map, drag the pin, or use current location in serviceable areas.
       </Text>
-      {formData.serviceType === 'visit-shop' && hasLatLong && (
+      {(formData.serviceType === 'visit-shop' || formData.serviceType === 'onsite') && hasLatLong && (
         <View style={styles.vendorsBanner}>
           <Icon name="map-pin" size={12} color="#E67E22" />
           <Text style={styles.vendorsBannerText}>
