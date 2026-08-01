@@ -10,6 +10,7 @@ import {
   NativeScrollEvent,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../core/theme';
 import { Button } from '../../core/components';
 
@@ -18,28 +19,28 @@ const { width: SCREEN_WIDTH } = Dimensions.get('window');
 const STEPS = [
   {
     key: 'welcome',
-    icon: '🛠',
+    icon: 'tool',
     title: 'Welcome to Fix4Ever',
     description:
       'Device repair made simple. We pick up your device, get it fixed by experts, and deliver it back to you.',
   },
   {
     key: 'describe',
-    icon: '📝',
+    icon: 'edit-3',
     title: 'Describe Your Issue',
     description:
       'Tell us your device and what’s wrong. We match you with verified technicians in your area.',
   },
   {
     key: 'book',
-    icon: '📦',
+    icon: 'truck',
     title: 'We Pick Up & Repair',
     description:
       'Choose a convenient time and place. We pick up from your doorstep and handle the rest.',
   },
   {
     key: 'deliver',
-    icon: '✅',
+    icon: 'check-circle',
     title: 'Get It Back, Fixed',
     description:
       'Expert repair with quality parts and warranty. We deliver your device back to you, good as new.',
@@ -113,9 +114,6 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
       justifyContent: 'center',
       marginBottom: spacing.xl,
     },
-    iconText: {
-      fontSize: 56,
-    },
     stepTitle: {
       ...typography.title,
       fontSize: 24,
@@ -177,7 +175,7 @@ export function OnboardingScreen({ onComplete }: OnboardingScreenProps) {
           <View key={step.key} style={styles.stepPage}>
             <View style={styles.stepContent}>
               <View style={styles.iconWrap}>
-                <Text style={styles.iconText}>{step.icon}</Text>
+                <Icon name={step.icon} size={56} color={colors.primary} />
               </View>
               <Text style={styles.stepTitle}>{step.title}</Text>
               <Text style={styles.stepDesc}>{step.description}</Text>
