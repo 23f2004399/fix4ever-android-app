@@ -657,18 +657,6 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
     }
   }, [serviceRequest.status]);
 
-  const handleContactSupport = () => {
-    Alert.alert(
-      'Contact Support',
-      'Would you like to call our support team or open a chat?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { text: 'Call', onPress: () => console.log('Calling support...') },
-        { text: 'Chat', onPress: () => console.log('Opening chat...') },
-      ]
-    );
-  };
-
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {
       case 'pending':
@@ -908,11 +896,6 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
       fontSize: 14,
       color: mutedText,
       fontFamily: fonts.medium,
-    },
-    actionButtons: {
-      flexDirection: 'row',
-      gap: spacing.sm,
-      marginTop: spacing.lg,
     },
     technicianInfo: {
       flexDirection: 'row',
@@ -2149,17 +2132,6 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
               </TouchableOpacity>
             )}
 
-            {/* Contact support */}
-            <View style={styles.actionButtons}>
-              <TouchableOpacity style={styles.actionButton} onPress={handleContactSupport}>
-                <Icon name="phone" size={18} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Contact Support</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.actionButton}>
-                <Icon name="message-circle" size={18} color={colors.primary} />
-                <Text style={styles.actionButtonText}>Send Message</Text>
-              </TouchableOpacity>
-            </View>
           </View>
         </ScrollView>
       </View>
