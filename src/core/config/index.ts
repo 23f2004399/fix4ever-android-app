@@ -22,6 +22,17 @@ const DEV_MODE_OVERRIDE: boolean | null = false;
 /** Override for physical device testing: set to your machine IP, e.g. "192.168.1.10" */
 const DEV_API_HOST_OVERRIDE: string | null = null;
 
+/**
+ * Cashfree checkout environment. null = SANDBOX in dev builds (__DEV__), PRODUCTION in release builds.
+ * Set explicitly to force one or the other regardless of build type.
+ */
+const CASHFREE_ENVIRONMENT_OVERRIDE: 'SANDBOX' | 'PRODUCTION' | null = null;
+
+function getCashfreeEnvironment(): 'SANDBOX' | 'PRODUCTION' {
+  if (CASHFREE_ENVIRONMENT_OVERRIDE !== null) return CASHFREE_ENVIRONMENT_OVERRIDE;
+  return typeof __DEV__ !== 'undefined' && __DEV__ ? 'SANDBOX' : 'PRODUCTION';
+}
+
 function getDevHost(): string {
   if (DEV_API_HOST_OVERRIDE) return DEV_API_HOST_OVERRIDE;
   return Platform.OS === 'android' ? '10.42.241.118': 'localhost';
@@ -47,6 +58,10 @@ export const config = {
   get DEV_MODE(): boolean {
     if (DEV_MODE_OVERRIDE !== null) return DEV_MODE_OVERRIDE;
     return typeof __DEV__ !== 'undefined' && __DEV__;
+  },
+  /** Cashfree checkout environment: 'SANDBOX' for testing, 'PRODUCTION' for real payments. */
+  get CASHFREE_ENVIRONMENT(): 'SANDBOX' | 'PRODUCTION' {
+    return getCashfreeEnvironment();
   },
   /**
    * Web OAuth 2.0 client ID from Google Cloud Console.
