@@ -293,7 +293,7 @@ export function AccountScreen({ onLogout }: AccountScreenProps) {
   return (
     <KeyboardAvoidingView
       style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : undefined}
+      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       keyboardVerticalOffset={0}
     >
       <SafeAreaView style={styles.container} edges={['bottom']}>
