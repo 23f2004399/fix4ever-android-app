@@ -10,6 +10,7 @@ import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../core/theme';
 import { requestWithAuth } from '../../core/api';
 import { getStoredToken } from '../../core/storage';
+import { config } from '../../core/config';
 import {
   CFPaymentGatewayService,
   CFErrorResponse,
@@ -196,7 +197,7 @@ export default function PaymentForm({
           const session = new CFSession(
             sessionId,
             orderId,
-            CFEnvironment.SANDBOX
+            CFEnvironment[config.CASHFREE_ENVIRONMENT]
           );
           setCFSession(session);
 
