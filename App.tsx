@@ -41,25 +41,18 @@ type MainScreen =
   | 'reset-password'
   | 'google-oauth';
 
-function AppContent() {
+function AppContent({
+  hasSeenOnboarding,
+  onOnboardingComplete,
+}: {
+  hasSeenOnboarding: boolean | null;
+  onOnboardingComplete: () => void | Promise<void>;
+}) {
   const { isDark, colors } = useTheme();
-  const [hasSeenOnboarding, setHasSeenOnboarding] = useState<boolean | null>(
-    null
-  );
   // const [user, setUser] = useState<User | null>(null);
   const { isLoadingUser, user, setUser } = useAuth();
   const [screen, setScreen] = useState<MainScreen>('home');
   const [footerTab, setFooterTab] = useState<FooterTabId>('overview');
-
-  useEffect(() => {
-    let mounted = true;
-    hasCompletedOnboarding().then(completed => {
-      if (mounted) setHasSeenOnboarding(completed);
-    });
-    return () => {
-      mounted = false;
-    };
-  }, []);
 
   useEffect(() => {
     if (!hasSeenOnboarding) return;
@@ -71,11 +64,6 @@ function AppContent() {
       mounted = false;
     };
   }, [hasSeenOnboarding]);
-
-  const handleOnboardingComplete = async () => {
-    await setOnboardingCompleted();
-    setHasSeenOnboarding(true);
-  };
 
   const handleLoginSuccess = async (token: string, newUser: User) => {
     await setAuth(token, newUser);
@@ -113,7 +101,7 @@ function AppContent() {
           barStyle={isDark ? 'light-content' : 'dark-content'}
           backgroundColor="transparent"
         />
-        <OnboardingScreen onComplete={handleOnboardingComplete} />
+        <OnboardingScreen onComplete={onOnboardingComplete} />
       </>
     );
   }
@@ -186,6 +174,11 @@ function AppNavigator() {
     };
   }, []);
 
+  const handleOnboardingComplete = async () => {
+    await setOnboardingCompleted();
+    setHasSeenOnboarding(true);
+  };
+
   const navigationTheme = {
     ...(isDark ? DarkTheme : DefaultTheme),
     colors: {
@@ -211,7 +204,14 @@ function AppNavigator() {
     >
       <Stack.Navigator screenOptions={{ headerShown: false }}>
         {!hasSeenOnboarding ? (
-          <Stack.Screen name="AppContent" component={AppContent} />
+          <Stack.Screen name="AppContent">
+            {() => (
+              <AppContent
+                hasSeenOnboarding={hasSeenOnboarding}
+                onOnboardingComplete={handleOnboardingComplete}
+              />
+            )}
+          </Stack.Screen>
         ) : (
           <Stack.Screen name="MainApp" component={TabNavigator} />
         )}
