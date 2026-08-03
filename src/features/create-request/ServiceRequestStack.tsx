@@ -5,7 +5,8 @@ import {
   TouchableOpacity,
   PermissionsAndroid,
   Platform,
-  DeviceEventEmitter
+  DeviceEventEmitter,
+  Modal
  } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 //import { createStackNavigator } from '@react-navigation/stack';
@@ -309,6 +310,7 @@ export function ServiceRequestStack({
     message: string;
     variant?: 'info' | 'success' | 'warning' | 'error';
   } | null>(null);
+  const [showNetworkErrorModal, setShowNetworkErrorModal] = useState(false);
 
   const [serviceTypeOverrideModal, setServiceTypeOverrideModal] = useState<{
     level: 'L2' | 'L3';
@@ -1357,13 +1359,30 @@ export function ServiceRequestStack({
             variant: 'error',
           });
         }
-      } catch (error) {
-        setError('Failed to submit request');
-        setPopup({
-          title: 'Error',
-          message: 'Failed to submit request',
-          variant: 'error',
-        });
+      } catch (error: any) {
+        console.error('Error submitting service request:', error);
+        const isNetworkError =
+          error?.message === 'Network Error' ||
+          error?.code === 'ECONNABORTED' ||
+          !error?.response;
+
+        if (isNetworkError) {
+          setShowNetworkErrorModal(true);
+        } else if (error?.response?.status === 401) {
+          setError('Session expired');
+          setPopup({
+            title: 'Session Expired',
+            message: 'Your login session has expired. Please log in again to submit your request.',
+            variant: 'warning',
+          });
+        } else {
+          setError('Failed to submit request');
+          setPopup({
+            title: 'Unable to Submit Request',
+            message: 'Something went wrong while processing your request. Please try again in a few moments.',
+            variant: 'error',
+          });
+        }
       } finally {
         setIsSubmitting(false);
       }
@@ -1415,6 +1434,83 @@ export function ServiceRequestStack({
           },
         ]}
       />
+      <Modal
+        visible={showNetworkErrorModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowNetworkErrorModal(false)}
+      >
+        <View style={{
+          flex: 1,
+          backgroundColor: 'rgba(15, 23, 42, 0.65)',
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: spacing.lg,
+        }}>
+          <View style={{
+            backgroundColor: colors.card,
+            borderRadius: 24,
+            padding: spacing.xl,
+            width: '90%',
+            maxWidth: 400,
+            alignItems: 'center',
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 10 },
+            shadowOpacity: 0.25,
+            shadowRadius: 20,
+            elevation: 10,
+          }}>
+            <View style={{
+              width: 72,
+              height: 72,
+              borderRadius: 36,
+              backgroundColor: 'rgba(1, 50, 93, 0.1)',
+              justifyContent: 'center',
+              alignItems: 'center',
+              marginBottom: spacing.md,
+            }}>
+              <Icon name="wifi-off" size={36} color={colors.primary} />
+            </View>
+            <Text style={{
+              fontSize: 20,
+              fontWeight: '700',
+              color: colors.foreground,
+              textAlign: 'center',
+              marginBottom: spacing.sm,
+            }}>
+              Network Connection Error
+            </Text>
+            <Text style={{
+              fontSize: 14,
+              color: colors.mutedForeground,
+              textAlign: 'center',
+              lineHeight: 20,
+              marginBottom: spacing.xl,
+            }}>
+              We couldn't submit your request due to a poor network connection. Please check your connection and try again later
+            </Text>
+            <TouchableOpacity
+              style={{
+                backgroundColor: colors.primary,
+                borderRadius: 14,
+                paddingVertical: spacing.md,
+                paddingHorizontal: spacing.xl,
+                width: '100%',
+                alignItems: 'center',
+              }}
+              onPress={() => setShowNetworkErrorModal(false)}
+            >
+              <Text style={{
+                color: '#FFFFFF',
+                fontSize: 16,
+                fontWeight: '600',
+              }}>
+                OK
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
       <Stack.Navigator
         initialRouteName={initialStepName}
         screenOptions={{

@@ -398,7 +398,7 @@ export function ImagesStepScreen({
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Upload Images (Optional)</Text>
           <Text style={styles.subtitle}>
-            Add photos showing the issue (up to 5 images)
+            Add photos showing the issue (up to 5 images, Max 2MB per photo)
           </Text>
           
           {imageUris.length > 0 && (
