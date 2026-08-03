@@ -756,17 +756,18 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
       }
     }
 
-    // If admin has set final price (paymentBreakdown or adminFinalPrice exists), add 18% GST
+    // Admin's final price is inclusive of 18% GST — extract it for the breakdown,
+    // don't add another 18% on top.
     const hasAdminPrice =
       (serviceRequest.paymentBreakdown && serviceRequest.paymentBreakdown.totalCost > 0) ||
       (serviceRequest.adminFinalPrice && serviceRequest.adminFinalPrice > 0);
 
     if (hasAdminPrice) {
-      // Add 18% GST to admin's final price
-      const gstAmount = Math.round(baseAmount * 0.18 * 100) / 100;
-      const totalAmount = Math.round((baseAmount + gstAmount) * 100) / 100;
+      const totalAmount = Math.round(baseAmount * 100) / 100;
+      const extractedBase = Math.round((totalAmount / 1.18) * 100) / 100;
+      const gstAmount = Math.round((totalAmount - extractedBase) * 100) / 100;
       return {
-        baseAmount: Math.round(baseAmount * 100) / 100,
+        baseAmount: extractedBase,
         gstAmount,
         totalAmount,
       };

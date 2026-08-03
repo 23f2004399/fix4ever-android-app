@@ -153,9 +153,12 @@ const formatCurrency = (amount: number): string => {
 };
 
 const GST_RATE = 0.18;
-const calcGST = (base: number) => {
-  const gst = Math.round(base * GST_RATE * 100) / 100;
-  return { base, gst, total: Math.round((base + gst) * 100) / 100 };
+// adminFinalPrice is inclusive of 18% GST — extract the GST portion for display,
+// don't add another 18% on top of it.
+const calcGST = (total: number) => {
+  const base = Math.round((total / (1 + GST_RATE)) * 100) / 100;
+  const gst = Math.round((total - base) * 100) / 100;
+  return { base, gst, total: Math.round(total * 100) / 100 };
 };
 
 export function TrackerScreen() {
