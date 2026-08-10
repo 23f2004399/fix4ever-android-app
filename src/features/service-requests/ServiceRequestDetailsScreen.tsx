@@ -1964,18 +1964,6 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
                         ₹{serviceRequest.paymentBreakdown.totalCost}
                       </Text>
                     </View>
-                    <View style={styles.paymentRow}>
-                      <Text style={{ fontSize: 12, color: colors.primary, fontFamily: fonts.medium }}>Technician Earnings (80%):</Text>
-                      <Text style={{ fontSize: 12, fontFamily: fonts.semibold, color: colors.primary }}>
-                        ₹{serviceRequest.paymentBreakdown.technicianEarnings}
-                      </Text>
-                    </View>
-                    <View style={styles.paymentRow}>
-                      <Text style={{ fontSize: 12, color: colors.primary, fontFamily: fonts.medium }}>Platform Fee (20%):</Text>
-                      <Text style={{ fontSize: 12, fontFamily: fonts.semibold, color: colors.primary }}>
-                        ₹{serviceRequest.paymentBreakdown.companyCommission}
-                      </Text>
-                    </View>
                   </View>
                 </View>
               )}

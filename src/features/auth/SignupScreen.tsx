@@ -314,7 +314,7 @@ export function SignupScreen({
             </>
           )}
 
-          {onGooglePress && (
+          {onGooglePress && Platform.OS !== 'ios' && (
             <>
               <View style={styles.dividerRow}>
                 <View style={styles.dividerLine} />
