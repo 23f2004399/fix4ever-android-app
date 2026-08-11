@@ -29,6 +29,8 @@ import {
 } from '../../core/api';
 
 // Response interface for service request creation
+const isValidPhone = (p?: string) => Boolean(p && /^\d{10}$/.test(p.trim()));
+
 interface ServiceRequestResponse {
   success: boolean;
   message?: string;
@@ -324,47 +326,6 @@ export function ServiceRequestStack({
   const [loadingAddress, setLoadingAddress] = useState(false);
 
   const { user } = useAuth();
-  const isValidPhone = (p?: string) => Boolean(p && /^\d{10}$/.test(p.trim()));
-
-  const [formData, setFormData] = useState<FormData>({
-      // Enhanced user contact and request details
-      requestType: 'self' as "self" | 'other',
-      serviceType: 'pickup-drop' as "pickup-drop" | 'visit-shop' | 'onsite',
-      userName: user?.username || '',
-      userPhone: isValidPhone(user?.phone) ? user!.phone!.trim() : '',
-      beneficiaryName: '',
-      beneficiaryPhone: '',
-      // Problem knowledge fields
-      knowsProblem: true as boolean,
-      problemType: '',
-      issueLevel: { id: 'moderate', name: 'Moderate', description: '', price: 500 } as IssueLevel,
-      problemDescription: '',
-      // Warranty and urgency
-      warrantyOption: 'none' as 'none' | '30days' | '3months',
-      urgencyLevel: 'normal' as 'normal' | 'express' | 'urgent',
-      dataSafety: true as boolean,
-      // Date and time
-      selectedDate: "" as string | null,
-      selectedTimeSlot: "" as string | null,
-      preferredDate: "" as string | null,
-      preferredTime: "" as string | null,
-      // Location
-      address: '',
-      latitude: 1,
-      longitude: 1,
-      city: '',
-      // Device details
-      brand: '',
-      model: '',
-      issueImages: [] as File[],
-      selectedBrand: '',
-      deviceType: 'Laptop',
-      customBrandName: '',
-      selectedModel: '',
-      mainProblem: {},
-      subProblem: {},
-      relationalBehaviors: []
-    });
 
   const calculatedPricing = useMemo(() => {
     const selectedProblemPricing = formData.knowsProblem
@@ -539,71 +500,107 @@ export function ServiceRequestStack({
     [draftPayload, setResolvedDraftId]
   );
 
-  const hydrateFormDataFromDraft = useCallback((draft: DraftServiceRequest) => {
-    const selectedProblem =
-      typeof draft.selectedProblem === 'string'
-        ? (() => {
-            try {
-              return JSON.parse(draft.selectedProblem);
-            } catch {
-              return {};
-            }
-          })()
-        : draft.selectedProblem || {};
+  const getInitialFormData = useCallback((): FormData => ({
+    requestType: 'self' as "self" | 'other',
+    serviceType: 'pickup-drop' as "pickup-drop" | 'visit-shop' | 'onsite',
+    userName: user?.username || '',
+    userPhone: isValidPhone(user?.phone) ? user!.phone!.trim() : '',
+    beneficiaryName: '',
+    beneficiaryPhone: '',
+    knowsProblem: true as boolean,
+    problemType: '',
+    issueLevel: { id: 'moderate', name: 'Moderate', description: '', price: 500 } as IssueLevel,
+    problemDescription: '',
+    warrantyOption: 'none' as 'none' | '30days' | '3months',
+    urgencyLevel: 'normal' as 'normal' | 'express' | 'urgent',
+    dataSafety: true as boolean,
+    selectedDate: "" as string | null,
+    selectedTimeSlot: "" as string | null,
+    preferredDate: "" as string | null,
+    preferredTime: "" as string | null,
+    address: '',
+    latitude: 1,
+    longitude: 1,
+    city: '',
+    brand: '',
+    model: '',
+    issueImages: [] as File[],
+    selectedBrand: '',
+    deviceType: 'Laptop',
+    customBrandName: '',
+    selectedModel: '',
+    mainProblem: {},
+    subProblem: {},
+    relationalBehaviors: [],
+  }), [user]);
 
-    setFormData((prev) => ({
-      ...prev,
-      requestType: draft.requestType || prev.requestType,
-      serviceType: draft.serviceType || prev.serviceType,
-      userName: draft.userName || prev.userName,
-      userPhone: draft.userPhone || prev.userPhone,
-      beneficiaryName: draft.beneficiaryName || prev.beneficiaryName,
-      beneficiaryPhone: draft.beneficiaryPhone || prev.beneficiaryPhone,
+  const [formData, setFormData] = useState<FormData>(getInitialFormData());
+
+  const hydrateFormDataFromDraft = useCallback((draft: DraftServiceRequest) => {
+    let selectedProblem: any = {};
+    try {
+      selectedProblem =
+        typeof draft.selectedProblem === 'string'
+          ? JSON.parse(draft.selectedProblem)
+          : draft.selectedProblem || {};
+    } catch {
+      selectedProblem = {};
+    }
+
+    const baseData = getInitialFormData();
+
+    setFormData({
+      ...baseData,
+      requestType: draft.requestType || 'self',
+      serviceType: draft.serviceType || 'pickup-drop',
+      userName: draft.userName || baseData.userName,
+      userPhone: draft.userPhone || baseData.userPhone,
+      beneficiaryName: draft.beneficiaryName || '',
+      beneficiaryPhone: draft.beneficiaryPhone || '',
       knowsProblem:
         draft.knowsProblem !== undefined
-          ? draft.knowsProblem === true || draft.knowsProblem === 'true'
-          : prev.knowsProblem,
-      problemType: draft.problemType || prev.problemType,
-      issueLevel: draft.issueLevel || prev.issueLevel,
-      problemDescription: draft.problemDescription || prev.problemDescription,
+          ? draft.knowsProblem === true || (draft.knowsProblem as any) === 'true'
+          : true,
+      problemType: draft.problemType || '',
+      issueLevel: draft.issueLevel || baseData.issueLevel,
+      problemDescription: draft.problemDescription || '',
       urgencyLevel:
         draft.urgency === 'urgent'
           ? 'urgent'
           : draft.urgency === 'express'
           ? 'express'
-          : prev.urgencyLevel,
+          : 'normal',
       dataSafety:
         draft.wantsDataSafety !== undefined
-          ? draft.wantsDataSafety === true || draft.wantsDataSafety === 'true'
-          : prev.dataSafety,
-      selectedDate: draft.selectedDate || prev.selectedDate,
-      selectedTimeSlot: draft.selectedTimeSlot || prev.selectedTimeSlot,
-      preferredDate: draft.preferredDate || prev.preferredDate,
-      preferredTime: draft.preferredTime || prev.preferredTime,
-      address: draft.address || prev.address,
+          ? draft.wantsDataSafety === true || (draft.wantsDataSafety as any) === 'true'
+          : true,
+      selectedDate: draft.selectedDate || '',
+      selectedTimeSlot: draft.selectedTimeSlot || '',
+      preferredDate: draft.preferredDate || '',
+      preferredTime: draft.preferredTime || '',
+      address: draft.address || '',
       latitude:
         draft.location?.lat ||
         draft.location?.latitude ||
         draft.latitude ||
-        prev.latitude,
+        1,
       longitude:
         draft.location?.lng ||
         draft.location?.longitude ||
         draft.longitude ||
-        prev.longitude,
-      city: draft.city || prev.city,
-      brand: draft.brand || prev.brand,
-      model: draft.model || prev.model,
-      selectedBrand: draft.brand || prev.selectedBrand,
-      selectedModel: draft.model || prev.selectedModel,
-      mainProblem: selectedProblem?.mainProblem || prev.mainProblem,
-      subProblem: selectedProblem?.subProblem || prev.subProblem,
-      relationalBehaviors:
-        selectedProblem?.relationalBehaviors || prev.relationalBehaviors,
-      issueImages: (draft.issueImages?.map((url: string) => ({ uri: url })) as any) || prev.issueImages,
-    } as unknown as FormData));
+        1,
+      city: draft.city || '',
+      brand: draft.brand || '',
+      model: draft.model || '',
+      selectedBrand: draft.brand || '',
+      selectedModel: draft.model || '',
+      mainProblem: selectedProblem?.mainProblem || {},
+      subProblem: selectedProblem?.subProblem || {},
+      relationalBehaviors: selectedProblem?.relationalBehaviors || [],
+      issueImages: (draft.issueImages?.map((url: string) => ({ uri: url })) as any) || [],
+    } as unknown as FormData);
     setAddressQuery(draft.address || '');
-  }, []);
+  }, [getInitialFormData]);
 
   useEffect(() => {
     if (!draftIdFromRoute) {
@@ -611,6 +608,8 @@ export function ServiceRequestStack({
       isDraftCreateInFlightRef.current = false;
       lastSavedFingerprintRef.current = null;
       lastSavedStepIndexRef.current = -1;
+      setFormData(getInitialFormData());
+      setAddressQuery('');
       setInitialStepName('Contact');
       setIsLoadingDraft(false);
       return;
@@ -1347,6 +1346,12 @@ export function ServiceRequestStack({
           },
         });  
         if (resp?.data?.success) {
+          setResolvedDraftId(null);
+          setFormData(getInitialFormData());
+          setAddressQuery('');
+          lastSavedFingerprintRef.current = null;
+          lastSavedStepIndexRef.current = -1;
+          DeviceEventEmitter.emit('refresh_drafts');
           setPopup({
             title: 'Success',
             message: 'Service request submitted successfully!',
