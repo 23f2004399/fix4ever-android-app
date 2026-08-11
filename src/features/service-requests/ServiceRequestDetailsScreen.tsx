@@ -1588,11 +1588,8 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
                   <Text style={styles.technicianName}>
                     {serviceRequest.assignedTechnician.pocInfo.fullName}
                   </Text>
-                  <Text style={styles.technicianContact}>
-                    <Icon name="phone" size={12} color={mutedText} /> {serviceRequest.assignedTechnician.pocInfo.phone}
-                  </Text>    
-                  <Text style={styles.technicianContact}>
-                    <Icon name="mail" size={12} color={mutedText} /> {serviceRequest.assignedTechnician.pocInfo.email}
+                  <Text style={[styles.technicianContact, { color: colors.success, marginTop: 2 }]}>
+                    <Icon name="check-circle" size={12} color={colors.success} /> Verified Partner
                   </Text>
                   <Text style={styles.technicianStatus}>Technician</Text>
                 </View>
@@ -1603,43 +1600,35 @@ export function ServiceRequestDetailsScreen(): React.ReactElement {
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {
-                    if (serviceRequest.serviceType === 'onsite') {
-                      Alert.alert(
-                        'Call via Fix4Ever CRM',
-                        "Your call will be routed through Fix4Ever's secure CRM. Neither party's contact details will be shared.",
-                        [
-                          { text: 'Cancel', style: 'cancel' },
-                          {
-                            text: 'Connect Call',
-                            onPress: () =>
-                              Alert.alert('Connecting...', 'Routing your call through Fix4Ever CRM. Please wait.'),
-                          },
-                        ]
-                      );
-                    } else if (serviceRequest.assignedTechnician?.pocInfo.phone) {
-                      Linking.openURL(`tel:${serviceRequest.assignedTechnician.pocInfo.phone}`);
-                    }
+                    Alert.alert(
+                      'Call via Fix4Ever CRM',
+                      "Your call will be routed through Fix4Ever's secure CRM. Neither party's contact details will be shared.",
+                      [
+                        { text: 'Cancel', style: 'cancel' },
+                        {
+                          text: 'Connect Call',
+                          onPress: () =>
+                            Alert.alert('Connecting...', 'Routing your call through Fix4Ever CRM. Please wait.'),
+                        },
+                      ]
+                    );
                   }}
                 >
                   <Icon name="phone" size={16} color={colors.primary} />
                   <Text style={styles.actionButtonText}>
-                    {serviceRequest.serviceType === 'onsite' ? 'Call via CRM' : 'Call'}
+                    Call via CRM
                   </Text>
                 </TouchableOpacity>
 
                 <TouchableOpacity
                   style={styles.actionButton}
                   onPress={() => {
-                    if (serviceRequest.serviceType === 'onsite') {
-                      (navigation as any).navigate('OnsiteChat', { serviceRequest });
-                    } else if (serviceRequest.assignedTechnician?.pocInfo.phone) {
-                      Linking.openURL(`sms:${serviceRequest.assignedTechnician.pocInfo.phone}`);
-                    }
+                    (navigation as any).navigate('OnsiteChat', { serviceRequest });
                   }}
                 >
                   <Icon name="message-circle" size={16} color={colors.primary} />
                   <Text style={styles.actionButtonText}>
-                    {serviceRequest.serviceType === 'onsite' ? 'Chat via CRM' : 'Message'}
+                    Chat via CRM
                   </Text>
                 </TouchableOpacity>
               </View>
