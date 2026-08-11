@@ -790,7 +790,8 @@ export function ContactStepScreen({
             <Input
               label="Phone Number"
               value={formData.userPhone}
-              onChangeText={(value: string) => handleTextChange('userPhone', value)}
+              onChangeText={(value: string) => handleTextChange('userPhone', value.replace(/[^0-9]/g, ''))}
+              onClear={() => handleTextChange('userPhone', '')}
               placeholder="Enter your 10-digit phone number"
               error={errors.userPhone}
               keyboardType="phone-pad"
@@ -810,9 +811,10 @@ export function ContactStepScreen({
             <Input
               label="Beneficiary Phone Number"
               value={formData.beneficiaryPhone}
-              onChangeText={(value: string) => handleTextChange('beneficiaryPhone', value)}
-              error={errors.beneficiaryPhone}
+              onChangeText={(value: string) => handleTextChange('beneficiaryPhone', value.replace(/[^0-9]/g, ''))}
+              onClear={() => handleTextChange('beneficiaryPhone', '')}
               placeholder="Enter beneficiary's 10-digit phone number"
+              error={errors.beneficiaryPhone}
               keyboardType="phone-pad"
               maxLength={10}
             />

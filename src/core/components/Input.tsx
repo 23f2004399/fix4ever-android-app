@@ -17,6 +17,7 @@ type InputProps = TextInputProps & {
   error?: string;
   containerStyle?: ViewStyle;
   labelStyle?: TextStyle;
+  onClear?: () => void;
 };
 
 export function Input({
@@ -27,6 +28,7 @@ export function Input({
   style,
   placeholderTextColor,
   secureTextEntry,
+  onClear,
   ...props
 }: InputProps) {
   const { colors, spacing, borderRadius } = useTheme();
@@ -34,6 +36,7 @@ export function Input({
   const [showPassword, setShowPassword] = useState(false);
 
   const isPasswordInput = Boolean(secureTextEntry);
+  const showClearButton = Boolean(onClear && props.value && String(props.value).length > 0 && !isPasswordInput);
 
   return (
     <View style={[styles.wrap, containerStyle]}>
@@ -62,7 +65,7 @@ export function Input({
               color: colors.foreground,
               paddingVertical: spacing.md,
               paddingHorizontal: spacing.md,
-              paddingRight: isPasswordInput ? 44 : spacing.md,
+              paddingRight: isPasswordInput || showClearButton ? 44 : spacing.md,
               borderRadius: borderRadius.md,
             },
             style,
@@ -83,6 +86,20 @@ export function Input({
             <Feather
               name={showPassword ? 'eye-off' : 'eye'}
               size={20}
+              color={colors.mutedForeground}
+            />
+          </TouchableOpacity>
+        )}
+        {showClearButton && (
+          <TouchableOpacity
+            style={styles.eyeBtn}
+            onPress={onClear}
+            activeOpacity={0.7}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+          >
+            <Feather
+              name="x-circle"
+              size={18}
               color={colors.mutedForeground}
             />
           </TouchableOpacity>
