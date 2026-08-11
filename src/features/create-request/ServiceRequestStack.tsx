@@ -324,13 +324,14 @@ export function ServiceRequestStack({
   const [loadingAddress, setLoadingAddress] = useState(false);
 
   const { user } = useAuth();
+  const isValidPhone = (p?: string) => Boolean(p && /^\d{10}$/.test(p.trim()));
 
   const [formData, setFormData] = useState<FormData>({
       // Enhanced user contact and request details
       requestType: 'self' as "self" | 'other',
       serviceType: 'pickup-drop' as "pickup-drop" | 'visit-shop' | 'onsite',
       userName: user?.username || '',
-      userPhone: user?.phone || '',
+      userPhone: isValidPhone(user?.phone) ? user!.phone!.trim() : '',
       beneficiaryName: '',
       beneficiaryPhone: '',
       // Problem knowledge fields
