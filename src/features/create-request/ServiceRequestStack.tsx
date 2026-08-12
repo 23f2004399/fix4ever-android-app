@@ -843,11 +843,13 @@ export function ServiceRequestStack({
         if (response.data?.success) {
           const brands = response.data.data.map((brand: any, index: number) => {
             brand.key = brand.key;
-            brand.name = brand.key.split("/").at(-1).split("-").at(0);
+            const parts = String(brand.key || '').split('/');
+            const filename = parts[parts.length - 1] || '';
+            brand.name = filename.split('-')[0] || '';
             brand.img_url = brand.url;
             brand.id = brand.key || index.toString();
             return brand;
-          })
+          });
           setBrands(brands);
         }
       } catch (error) {
@@ -877,13 +879,14 @@ export function ServiceRequestStack({
         );
         
         if (response.data?.success) {
-          
           const models = response.data.data.map((model: any, index: number) => {
             model.key = model.key;
-            model.name = model.key.split("/").at(-1).split(".").at(0);
+            const parts = String(model.key || '').split('/');
+            const filename = parts[parts.length - 1] || '';
+            model.name = filename.split('.')[0] || '';
             model.id = index.toString();
             return model;
-          })
+          });
           setModels(models);
         }
 
@@ -894,25 +897,22 @@ export function ServiceRequestStack({
       }
     }
 
-    // When reopening a draft directly on Model (or later), preload dependencies.
+    // Preload brands and models when reaching Brand or Model step.
     useEffect(() => {
-      if (!draftIdFromRoute || isLoadingDraft) {
+      if (isLoadingDraft) {
         return;
       }
 
-      const stepIndex = STACK_STEP_NAMES.indexOf(initialStepName);
-      if (stepIndex >= 1 && brands.length === 0) {
+      if (brands.length === 0) {
         void getAllBrands();
       }
 
-      if (stepIndex >= 2 && models.length === 0 && formData.brand) {
+      if (models.length === 0 && formData.brand) {
         void getBrandModels(formData.brand);
       }
     }, [
       brands.length,
-      draftIdFromRoute,
       formData.brand,
-      initialStepName,
       isLoadingDraft,
       models.length,
     ]);
@@ -951,7 +951,7 @@ export function ServiceRequestStack({
     let resolvedCity = '';
 
     try {
-      const geocodingKey = Config.GOOGLE_MAPS_API_KEY;
+      const geocodingKey = Config.GOOGLE_MAPS_API_KEY || config.GOOGLE_MAPS_API_KEY;
 
       if (!geocodingKey) {
         return;

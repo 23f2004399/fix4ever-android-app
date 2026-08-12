@@ -5,6 +5,7 @@ import {
   TouchableOpacity,
   ActivityIndicator,
   Alert,
+  ScrollView,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../core/theme';
@@ -19,6 +20,10 @@ import {
 import {
   CFEnvironment,
   CFSession,
+  CFDropCheckoutPayment,
+  CFPaymentComponentBuilder,
+  CFPaymentModes,
+  CFThemeBuilder,
 } from 'cashfree-pg-api-contract';
 
 
@@ -201,10 +206,29 @@ export default function PaymentForm({
           );
           setCFSession(session);
 
-          console.log('Opening Cashfree checkout with session:', sessionId);
+          // Configure payment components (Cards, UPI, NetBanking, Wallets, PayLater)
+          const paymentComponent = new CFPaymentComponentBuilder()
+            .add(CFPaymentModes.CARD)
+            .add(CFPaymentModes.UPI)
+            .add(CFPaymentModes.NB)
+            .add(CFPaymentModes.WALLET)
+            .add(CFPaymentModes.PAY_LATER)
+            .build();
 
-          // Initiate payment using Cashfree SDK
-          CFPaymentGatewayService.doWebPayment(session);
+          // Configure theme styling
+          const theme = new CFThemeBuilder()
+            .setNavigationBarBackgroundColor('#4F46E5')
+            .setButtonBackgroundColor('#4F46E5')
+            .setPrimaryTextColor('#111827')
+            .build();
+
+          // Build Drop Checkout payment object
+          const dropPayment = new CFDropCheckoutPayment(session, paymentComponent, theme);
+
+          console.log('Opening Cashfree Drop Checkout with session:', sessionId);
+
+          // Initiate native payment using Cashfree Drop SDK
+          CFPaymentGatewayService.doPayment(dropPayment);
 
           
           
@@ -263,13 +287,14 @@ export default function PaymentForm({
   }
 
   return (
-    <View style={{ gap: spacing.lg }}>
-      <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
-        <Icon name="shield" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
-        <Text style={{ fontSize: 15, color: colors.mutedForeground, textAlign: 'center', paddingHorizontal: spacing.xl }}>
-          Secure, encrypted transactions powered by Cashfree.
-        </Text>
-      </View>
+    <ScrollView style={{ maxHeight: 500 }} showsVerticalScrollIndicator={false} contentContainerStyle={{ paddingBottom: spacing.sm }}>
+      <View style={{ gap: spacing.lg }}>
+        <View style={{ alignItems: 'center', marginTop: spacing.xs }}>
+          <Icon name="shield" size={32} color={colors.primary} style={{ marginBottom: spacing.sm }} />
+          <Text style={{ fontSize: 15, color: colors.mutedForeground, textAlign: 'center', paddingHorizontal: spacing.xl }}>
+            Secure, encrypted transactions powered by Cashfree.
+          </Text>
+        </View>
 
       <View style={{
         backgroundColor: colors.card,
@@ -482,7 +507,7 @@ export default function PaymentForm({
               <>
                 <Icon name="lock" size={18} color="#FFFFFF" />
                 <Text style={{ fontSize: 16, fontWeight: '700', color: '#FFFFFF' }}>
-                  Pay ₹{amount.toFixed(2)}
+                  Pay ₹{totalAmount.toFixed(2)}
                 </Text>
               </>
             )}
@@ -511,5 +536,6 @@ export default function PaymentForm({
         By completing this payment, you agree to our terms of service
       </Text>
     </View>
+    </ScrollView>
   );
 }
