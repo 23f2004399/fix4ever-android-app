@@ -327,6 +327,42 @@ export function ServiceRequestStack({
 
   const { user } = useAuth();
 
+  const getInitialFormData = useCallback((): FormData => ({
+    requestType: 'self' as "self" | 'other',
+    serviceType: 'pickup-drop' as "pickup-drop" | 'visit-shop' | 'onsite',
+    userName: user?.username || '',
+    userPhone: isValidPhone(user?.phone) ? user!.phone!.trim() : '',
+    beneficiaryName: '',
+    beneficiaryPhone: '',
+    knowsProblem: true as boolean,
+    problemType: '',
+    issueLevel: { id: 'moderate', name: 'Moderate', description: '', price: 500 } as IssueLevel,
+    problemDescription: '',
+    warrantyOption: 'none' as 'none' | '30days' | '3months',
+    urgencyLevel: 'normal' as 'normal' | 'express' | 'urgent',
+    dataSafety: true as boolean,
+    selectedDate: "" as string | null,
+    selectedTimeSlot: "" as string | null,
+    preferredDate: "" as string | null,
+    preferredTime: "" as string | null,
+    address: '',
+    latitude: 1,
+    longitude: 1,
+    city: '',
+    brand: '',
+    model: '',
+    issueImages: [] as File[],
+    selectedBrand: '',
+    deviceType: 'Laptop',
+    customBrandName: '',
+    selectedModel: '',
+    mainProblem: {},
+    subProblem: {},
+    relationalBehaviors: [],
+  }), [user]);
+
+  const [formData, setFormData] = useState<FormData>(getInitialFormData());
+
   const calculatedPricing = useMemo(() => {
     const selectedProblemPricing = formData.knowsProblem
       ? getProblemPricingFromSelection({
@@ -499,42 +535,6 @@ export function ServiceRequestStack({
     },
     [draftPayload, setResolvedDraftId]
   );
-
-  const getInitialFormData = useCallback((): FormData => ({
-    requestType: 'self' as "self" | 'other',
-    serviceType: 'pickup-drop' as "pickup-drop" | 'visit-shop' | 'onsite',
-    userName: user?.username || '',
-    userPhone: isValidPhone(user?.phone) ? user!.phone!.trim() : '',
-    beneficiaryName: '',
-    beneficiaryPhone: '',
-    knowsProblem: true as boolean,
-    problemType: '',
-    issueLevel: { id: 'moderate', name: 'Moderate', description: '', price: 500 } as IssueLevel,
-    problemDescription: '',
-    warrantyOption: 'none' as 'none' | '30days' | '3months',
-    urgencyLevel: 'normal' as 'normal' | 'express' | 'urgent',
-    dataSafety: true as boolean,
-    selectedDate: "" as string | null,
-    selectedTimeSlot: "" as string | null,
-    preferredDate: "" as string | null,
-    preferredTime: "" as string | null,
-    address: '',
-    latitude: 1,
-    longitude: 1,
-    city: '',
-    brand: '',
-    model: '',
-    issueImages: [] as File[],
-    selectedBrand: '',
-    deviceType: 'Laptop',
-    customBrandName: '',
-    selectedModel: '',
-    mainProblem: {},
-    subProblem: {},
-    relationalBehaviors: [],
-  }), [user]);
-
-  const [formData, setFormData] = useState<FormData>(getInitialFormData());
 
   const hydrateFormDataFromDraft = useCallback((draft: DraftServiceRequest) => {
     let selectedProblem: any = {};
