@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import {
   View,
   Text,
@@ -6,6 +6,7 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  Linking,
 } from 'react-native';
 import Icon from 'react-native-vector-icons/Feather';
 import { useTheme } from '../../core/theme';
@@ -80,6 +81,8 @@ export default function PaymentForm({
 
   const totalAmount = amount + getWarrantyPrice();
 
+  const activePaymentLinkRef = useRef<string | null>(null);
+
   useEffect(() => {
     // Set up payment callbacks
     CFPaymentGatewayService.setCallback({
@@ -123,17 +126,29 @@ export default function PaymentForm({
       },
     
       onError: (error: CFErrorResponse, orderID: string) => {
-        console.log('Payment onError:', error.getMessage(), 'Order ID:', orderID);
+        console.log('Payment onError details:', {
+          message: error.getMessage(),
+          code: error.getCode(),
+          type: error.getType(),
+          status: error.getStatus(),
+          orderID,
+        });
         setIsProcessing(false);
         const msg = (error.getMessage() || '').toLowerCase();
+        const code = (error.getCode() || '').toLowerCase();
         const isCancelled =
           msg.includes('cancel') ||
           msg.includes('back') ||
           msg.includes('dismiss') ||
           msg.includes('user_back') ||
-          msg.includes('closed');
+          msg.includes('closed') ||
+          code.includes('cancel') ||
+          code.includes('user_back');
         if (!isCancelled) {
-          Alert.alert('Payment Failed', error.getMessage() || 'Payment could not be completed. Please try again.');
+          const detailMsg = error.getCode()
+            ? `Error [${error.getCode()}]: ${error.getMessage()}`
+            : error.getMessage() || 'Payment could not be completed. Please try again.';
+          Alert.alert('Payment Failed', detailMsg);
         }
         // Cancellation: silently reset — user chose to go back, no alert needed
       },
@@ -192,7 +207,13 @@ export default function PaymentForm({
         const sessionId = response.data.data.paymentSessionId;
         const orderId = response.data.data.orderId;
         const transactionId = response.data.data.transactionId;
-        console.log(orderId)
+        const paymentLink = response.data.data.paymentLink;
+
+        if (paymentLink) {
+          activePaymentLinkRef.current = paymentLink;
+        }
+
+        console.log(orderId);
         setPaymentSessionId(sessionId);
         setOrderId(orderId);
         setTransactionId(transactionId || '');
@@ -206,24 +227,16 @@ export default function PaymentForm({
           );
           setCFSession(session);
 
-          // Configure payment components (Cards, UPI, NetBanking, Wallets, PayLater)
-          const paymentComponent = new CFPaymentComponentBuilder()
+          // Build explicit supported payment components (CARD, UPI, Netbanking, Wallet)
+          const components = new CFPaymentComponentBuilder()
             .add(CFPaymentModes.CARD)
             .add(CFPaymentModes.UPI)
             .add(CFPaymentModes.NB)
             .add(CFPaymentModes.WALLET)
-            .add(CFPaymentModes.PAY_LATER)
             .build();
 
-          // Configure theme styling
-          const theme = new CFThemeBuilder()
-            .setNavigationBarBackgroundColor('#4F46E5')
-            .setButtonBackgroundColor('#4F46E5')
-            .setPrimaryTextColor('#111827')
-            .build();
-
-          // Build Drop Checkout payment object
-          const dropPayment = new CFDropCheckoutPayment(session, paymentComponent, theme);
+          // Build Drop Checkout payment object with explicit components
+          const dropPayment = new CFDropCheckoutPayment(session, components, null);
 
           console.log('Opening Cashfree Drop Checkout with session:', sessionId);
 
